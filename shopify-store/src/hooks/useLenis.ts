@@ -1,0 +1,1 @@
+// This file is deprecated — Lenis is now handled globally in providers.tsx via SmoothScroll component from @/lib/lenis.tsx

@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  LOCKED
+  DISABLED
+}
+
+model AuthUser {
+  id           String                   @id @default(cuid())
+  status       UserStatus               @default(PENDING_VERIFICATION)
+  fullName     String?
+  roles        String[]                 @default(["CUSTOMER"])
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  identity     AuthIdentity?
+  sessions     AuthSession[]
+  resetTokens  PasswordResetToken[]
+  verifyTokens EmailVerificationToken[]
+
+  @@map("auth_users")
+}
+
+model AuthIdentity {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  email            String
+  emailNormalized  String    @unique
+  passwordHash     String?
+  emailVerifiedAt  DateTime?
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user             AuthUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([emailNormalized])
+  @@map("auth_identities")
+}
+
+model AuthSession {
+  id               String    @id @default(cuid())
+  userId           String
+  refreshTokenHash String
+  tokenFamilyId    String
+  ipAddress        String?
+  userAgent        String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  revokeReason     String?
+  createdAt        DateTime  @default(now())
+
+  user             AuthUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenFamilyId])
+  @@index([refreshTokenHash])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      AuthUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      AuthUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
+}
+
+model AuditLoginLog {
+  id            String   @id @default(cuid())
+  userId        String?
+  identityEmail String
+  success       Boolean
+  failureReason String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  @@index([identityEmail])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_login_logs")
+}

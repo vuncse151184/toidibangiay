@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model InventoryItem {
+  id        String   @id @default(uuid())
+  variantId String   @unique
+  quantity  Int      @default(0)
+  reserved  Int      @default(0)
+  warehouse String   @default("HCM")
+  updatedAt DateTime @updatedAt
+
+  transactions InventoryTransaction[]
+
+  @@index([variantId])
+  @@map("inventory_items")
+}
+
+model InventoryTransaction {
+  id          String          @id @default(uuid())
+  variantId   String
+  type        TransactionType
+  quantity    Int
+  referenceId String?
+  note        String?
+  createdAt   DateTime        @default(now())
+
+  item InventoryItem @relation(fields: [variantId], references: [variantId])
+
+  @@index([variantId])
+  @@index([referenceId])
+  @@index([createdAt])
+  @@map("inventory_transactions")
+}
+
+enum TransactionType {
+  RESTOCK
+  RESERVE
+  RELEASE
+  SOLD
+  ADJUSTMENT
+}

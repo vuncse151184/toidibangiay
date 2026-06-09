@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Order {
+  id              String        @id @default(uuid())
+  orderCode       String        @unique
+  userId          String
+  status          OrderStatus   @default(PENDING)
+  subtotal        Int
+  shippingFee     Int           @default(30000)
+  discount        Int           @default(0)
+  total           Int
+  paymentMethod   PaymentMethod
+  shippingAddress Json
+  note            String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  items  OrderItem[]
+  events OrderEvent[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String @id @default(uuid())
+  orderId      String
+  variantId    String
+  productName  String
+  variantTitle String
+  price        Int
+  quantity     Int
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model OrderEvent {
+  id        String      @id @default(uuid())
+  orderId   String
+  status    OrderStatus
+  note      String?
+  createdBy String?
+  createdAt DateTime    @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_events")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  VNPAY
+  MOMO
+  COD
+}

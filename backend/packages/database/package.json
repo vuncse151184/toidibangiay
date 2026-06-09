@@ -1,0 +1,17 @@
+{
+  "name": "@ecommerce/database",
+  "version": "1.0.0",
+  "main": "src/client.ts",
+  "scripts": {
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "prisma": "^5.9.0"
+  }
+}

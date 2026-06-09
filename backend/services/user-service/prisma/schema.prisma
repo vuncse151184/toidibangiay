@@ -1,0 +1,246 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  LOCKED
+  DISABLED
+}
+
+enum IdentityProvider {
+  PASSWORD
+  GOOGLE
+  APPLE
+  SSO
+}
+
+enum PasswordAlgo {
+  ARGON2ID
+  BCRYPT
+}
+
+enum MfaType {
+  NONE
+  TOTP
+  WEBAUTHN
+}
+
+enum AddressType {
+  SHIPPING
+  BILLING
+  BOTH
+}
+
+enum OutboxStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+}
+
+model User {
+  id          String          @id @default(cuid())
+  status      UserStatus      @default(PENDING_VERIFICATION)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
+
+  identities  UserIdentity[]
+  profile     UserProfile?
+  addresses   UserAddress[]
+  sessions    UserSession[]
+  roles       UserRole[]
+  loginLogs   AuditLoginLog[]
+  resetTokens PasswordResetToken[]
+  verifyTokens EmailVerificationToken[]
+
+  @@map("users")
+}
+
+model UserIdentity {
+  id                String           @id @default(cuid())
+  userId            String
+  provider          IdentityProvider
+  email             String
+  emailNormalized   String
+  passwordHash      String?
+  passwordAlgo      PasswordAlgo?
+  emailVerifiedAt   DateTime?
+  mfaEnabled        Boolean          @default(false)
+  mfaType           MfaType          @default(NONE)
+  failedLoginCount  Int              @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, emailNormalized])
+  @@index([userId])
+  @@index([emailNormalized])
+  @@map("user_identities")
+}
+
+model UserProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  firstName       String?
+  lastName        String?
+  fullName        String?
+  phone           String?
+  phoneVerifiedAt DateTime?
+  avatarUrl       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model UserAddress {
+  id                 String      @id @default(cuid())
+  userId             String
+  label              String?
+  recipientName      String
+  phone              String
+  countryCode        String
+  province           String
+  district           String
+  ward               String?
+  addressLine1       String
+  addressLine2       String?
+  postalCode         String?
+  isDefaultShipping  Boolean     @default(false)
+  isDefaultBilling   Boolean     @default(false)
+  type               AddressType @default(BOTH)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_addresses")
+}
+
+model UserSession {
+  id                    String    @id @default(cuid())
+  userId                String
+  refreshTokenHash      String
+  tokenFamilyId         String
+  deviceId              String?
+  userAgent             String?
+  ipAddress             String?
+  lastSeenAt            DateTime?
+  expiresAt             DateTime
+  revokedAt             DateTime?
+  revokeReason          String?
+  rotatedFromSessionId  String?
+  createdAt             DateTime  @default(now())
+
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenFamilyId])
+  @@index([expiresAt])
+  @@index([refreshTokenHash])
+  @@map("user_sessions")
+}
+
+model Role {
+  id          String     @id @default(cuid())
+  code        String     @unique
+  name        String
+  description String?
+  createdAt   DateTime   @default(now())
+
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  userId      String
+  roleId      String
+  assignedAt  DateTime   @default(now())
+  assignedBy  String?
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        Role       @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model AuditLoginLog {
+  id             String    @id @default(cuid())
+  userId         String?
+  identityEmail  String
+  success        Boolean
+  failureReason  String?
+  ipAddress      String?
+  userAgent      String?
+  countryCode    String?
+  createdAt      DateTime  @default(now())
+
+  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([identityEmail])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_login_logs")
+}
+
+model PasswordResetToken {
+  id             String    @id @default(cuid())
+  userId         String
+  tokenHash      String    @unique
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id             String    @id @default(cuid())
+  userId         String
+  tokenHash      String    @unique
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
+}
+
+model OutboxEvent {
+  id            String       @id @default(cuid())
+  aggregateType String
+  aggregateId   String
+  eventType     String
+  payloadJson   Json
+  status        OutboxStatus @default(PENDING)
+  retryCount    Int          @default(0)
+  createdAt     DateTime     @default(now())
+  publishedAt   DateTime?
+
+  @@index([status, createdAt])
+  @@map("outbox_events")
+}

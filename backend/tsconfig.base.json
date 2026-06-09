@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "CommonJS",
+        "strict": true,
+        "declaration": true,
+        "sourceMap": true,
+        "outDir": "dist",
+        "paths": {
+            "@shared/*": [
+                "./packages/shared/src/*"
+            ],
+            "@config/*": [
+                "./packages/config/src/*"
+            ],
+            "@database/*": [
+                "./packages/database/src/*"
+            ]
+        }
+    }
+}
