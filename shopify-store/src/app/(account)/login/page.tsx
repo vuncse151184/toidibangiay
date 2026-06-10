@@ -54,10 +54,10 @@ function LoginForm() {
       <div className="lg:hidden mb-8 flex justify-center">
         <Link href="/">
           <Image
-            src="https://res.cloudinary.com/dtov4zdy4/image/upload/v1773218437/ChatGPT_Image_Mar_11_2026_03_37_06_PM_1_iolztk.png"
+            src="/images/logo1.png"
             alt="Jumpman"
-            width={80}
-            height={80}
+            width={280}
+            height={280}
           />
         </Link>
       </div>
@@ -242,15 +242,11 @@ export default function LoginPage() {
         >
           <Link href="/" className="flex items-center gap-3">
             <Image
-              src="https://res.cloudinary.com/dtov4zdy4/image/upload/v1773218437/ChatGPT_Image_Mar_11_2026_03_37_06_PM_1_iolztk.png"
+              src="/images/logo1.png"
               alt="Jumpman"
-              width={56}
-              height={56}
+              width={200}
+              height={200}
             />
-            <div>
-              <p className="text-white font-bold text-sm tracking-wide leading-none">Toidibangiay</p>
-              <p className="text-white/30 text-[10px] tracking-[0.2em] uppercase mt-0.5">Sneaker chính hãng</p>
-            </div>
           </Link>
         </motion.div>
 

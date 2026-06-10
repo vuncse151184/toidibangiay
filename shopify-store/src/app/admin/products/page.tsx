@@ -1,8 +1,9 @@
 "use client"
 
 import Image from "next/image"
+import Link from "next/link"
 import { useEffect, useState, useCallback } from "react"
-import { Search, Plus, Eye, EyeOff, RefreshCw, Tag } from "lucide-react"
+import { Search, Plus, Eye, EyeOff, RefreshCw, Tag, Pencil } from "lucide-react"
 import { backendClientFetch } from "@/lib/backend-client"
 import { useAuthStore, type AuthState } from "@/store/auth.store"
 import type { AdminProduct, PaginatedMeta } from "@/types/admin"
@@ -63,13 +64,13 @@ export default function AdminProductsPage() {
           <h1 className="text-2xl font-bold text-white">Sản phẩm</h1>
           <p className="text-white/40 text-sm mt-1">{meta.total} sản phẩm</p>
         </div>
-        <button
+        <Link
+          href="/admin/products/new"
           className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-xl transition-colors"
-          onClick={() => alert("Tính năng thêm sản phẩm đang phát triển")}
         >
           <Plus size={16} />
           Thêm sản phẩm
-        </button>
+        </Link>
       </div>
 
       {/* Search */}
@@ -102,6 +103,7 @@ export default function AdminProductsPage() {
                   <th className="text-left px-4 py-4 text-xs font-semibold text-white/40 tracking-wider uppercase hidden lg:table-cell">Giá thấp nhất</th>
                   <th className="text-left px-4 py-4 text-xs font-semibold text-white/40 tracking-wider uppercase hidden sm:table-cell">Variants</th>
                   <th className="text-left px-4 py-4 text-xs font-semibold text-white/40 tracking-wider uppercase">Trạng thái</th>
+                  <th className="px-4 py-4" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
@@ -145,6 +147,15 @@ export default function AdminProductsPage() {
                           {product.isActive ? <Eye size={10} /> : <EyeOff size={10} />}
                           {product.isActive ? "Hiển thị" : "Ẩn"}
                         </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <Link
+                          href={`/admin/products/${product.id}/edit`}
+                          className="flex items-center gap-1 text-xs text-white/40 hover:text-white transition-colors"
+                        >
+                          <Pencil size={12} />
+                          Sửa
+                        </Link>
                       </td>
                     </tr>
                   )

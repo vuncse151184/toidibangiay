@@ -17,7 +17,7 @@ export default function HeroNavbar() {
         {/* Left: Jumpman + Nike logos */}
         <div className="flex items-center gap-4">
           {/* Jumpman silhouette SVG */}
-          <Image src="https://res.cloudinary.com/dtov4zdy4/image/upload/v1773218437/ChatGPT_Image_Mar_11_2026_03_37_06_PM_1_iolztk.png" alt="Jumpman" width={120} height={120} />
+          <Image src="/images/logo3.png" alt="Jumpman" width={320} height={320} />
         </div>
 
         {/* Center: Nav links */}

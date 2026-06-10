@@ -154,6 +154,13 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               <AddToCartButton
                 variantId={activeVariant?.id ?? ""}
                 disabled={!activeVariant || !activeVariant.availableForSale}
+                optimistic={product ? {
+                  productId: product.id,
+                  title: product.title,
+                  variantLabel: activeVariant?.title,
+                  price,
+                  image: product.images[0]?.url,
+                } : undefined}
               />
 
               <button className="flex items-center justify-center gap-3 w-full py-4 rounded-lg text-sm font-bold tracking-[0.15em] uppercase border-2 border-white/[0.15] text-white hover:border-white/30 hover:bg-white/[0.03] transition-all duration-300">

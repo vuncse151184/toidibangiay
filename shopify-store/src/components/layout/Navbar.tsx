@@ -154,10 +154,10 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
             <Image
-              src="https://res.cloudinary.com/dtov4zdy4/image/upload/v1773218437/ChatGPT_Image_Mar_11_2026_03_37_06_PM_1_iolztk.png"
+              src="/images/logo1.png"
               alt="Jumpman"
-              width={100}
-              height={100}
+              width={200}
+              height={200}
             />
           </Link>
 

@@ -8,11 +8,24 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
+      // AWS S3 — direct bucket URL
       {
         protocol: 'https',
-        hostname: 'res.cloudinary.com',
+        hostname: '*.s3.amazonaws.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: '*.s3.*.amazonaws.com',
+        pathname: '/**',
+      },
+      // AWS CloudFront CDN
+      {
+        protocol: 'https',
+        hostname: '*.cloudfront.net',
+        pathname: '/**',
+      },
+      // Dev / placeholder
       {
         protocol: 'https',
         hostname: 'via.placeholder.com',
@@ -21,6 +34,11 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'static.nike.com',
+        pathname: '/**',
+      },
+       {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com', 
         pathname: '/**',
       },
     ],

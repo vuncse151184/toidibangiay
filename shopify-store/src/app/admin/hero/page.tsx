@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react"
 import { useAuthStore } from "@/store/auth.store"
 import { backendClientFetch } from "@/lib/backend-client"
-import { Plus, Trash2, Save, RefreshCw, GripVertical, Image as ImageIcon } from "lucide-react"
+import { Plus, Trash2, Save, RefreshCw, GripVertical } from "lucide-react"
+import ImageUpload from "@/components/ui/ImageUpload"
 
 interface HeroSlide {
   id: string
@@ -244,16 +245,13 @@ export default function AdminHeroPage() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs text-white/30 mb-1">URL ảnh</label>
-                    <div className="flex items-center gap-2">
-                      <ImageIcon size={13} className="text-white/20 flex-shrink-0" />
-                      <input
-                        value={slide.src}
-                        onChange={(e) => updateSlide(i, "src", e.target.value)}
-                        placeholder="/images/shoe.png"
-                        className="flex-1 bg-black/30 border border-white/10 rounded px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-red-500/40 placeholder:text-white/20"
-                      />
-                    </div>
+                    <ImageUpload
+                      label="Ảnh slide"
+                      value={slide.src}
+                      onChange={(url) => updateSlide(i, "src", url)}
+                      folder="toidibangiay/hero"
+                      aspectRatio="4/3"
+                    />
                   </div>
                 </div>
 

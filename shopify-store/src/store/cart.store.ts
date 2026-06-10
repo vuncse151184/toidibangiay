@@ -11,6 +11,8 @@ export interface CartItem {
   quantity: number
 }
 
+export type OptimisticItem = Omit<CartItem, "variantId" | "quantity">
+
 type BackendCartItem = {
   productId: string
   variantId: string
@@ -34,7 +36,7 @@ export interface CartState {
   error?: string
 
   syncCart: (accessToken?: string | null) => Promise<void>
-  addItem: (variantId: string, quantity: number, accessToken?: string | null) => Promise<void>
+  addItem: (variantId: string, quantity: number, accessToken?: string | null, optimistic?: OptimisticItem) => Promise<void>
   removeItem: (variantId: string, accessToken?: string | null) => Promise<void>
   updateQuantity: (variantId: string, qty: number, accessToken?: string | null) => Promise<void>
   clearCart: (accessToken?: string | null) => Promise<void>
@@ -75,8 +77,19 @@ export const useCartStore = create<CartState>((set, get) => ({
     }
   },
 
-  addItem: async (variantId, quantity = 1, accessToken) => {
-    set({ loading: true, error: undefined })
+  addItem: async (variantId, quantity = 1, accessToken, optimistic) => {
+    const prevItems = get().items
+    if (optimistic) {
+      const existing = prevItems.find((i) => i.variantId === variantId)
+      const optimisticItems = existing
+        ? prevItems.map((i) =>
+            i.variantId === variantId ? { ...i, quantity: i.quantity + quantity } : i
+          )
+        : [...prevItems, { ...optimistic, variantId, quantity }]
+      set({ items: optimisticItems, isOpen: true })
+    } else {
+      set({ loading: true, error: undefined })
+    }
     try {
       const cart = await backendClientFetch<BackendCart>("/cart/items", {
         accessToken,
@@ -85,7 +98,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       })
       set({ ...mapBackendCart(cart), isOpen: true, loading: false })
     } catch (error) {
-      set({ loading: false, error: error instanceof Error ? error.message : "Failed to add item" })
+      set({ items: prevItems, loading: false, error: error instanceof Error ? error.message : "Failed to add item" })
       throw error
     }
   },

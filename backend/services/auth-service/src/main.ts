@@ -11,9 +11,9 @@ async function bootstrap() {
 
   app.use(cookieParser());
   app.enableCors({
-    origin: env.FRONTEND_URL,
+    origin: [env.FRONTEND_URL, 'https://toidibangiay-3gjm.vercel.app'],
     credentials: true,
-  });
+  }); 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({

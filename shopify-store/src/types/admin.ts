@@ -60,6 +60,7 @@ export interface AdminProductVariant {
   price: number
   compareAtPrice?: number
   isActive: boolean
+  image?: string
 }
 
 export interface AdminProductImage {

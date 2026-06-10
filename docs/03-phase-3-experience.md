@@ -726,34 +726,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 - [ ] Search response < 100ms (95th percentile)
 
 ### Frontend Performance
-- [ ] Skeleton loading trên tất cả trang có data fetch
-- [ ] Infinite scroll hoạt động (không có "Load more" button)
+- [x] Skeleton loading trên tất cả trang có data fetch — `TableSkeleton` trong admin/products, loading state trong hero, products pages
+- [x] Infinite scroll hoạt động — `useInfiniteShowMore` hook dùng IntersectionObserver
 - [ ] Optimistic update cho add-to-cart (không chờ server)
 - [ ] Cart count update ngay khi thêm (không blink)
-- [ ] Images lazy loaded, WebP format
+- [x] Images lazy loaded, WebP format — Next.js `<Image>` component dùng xuyên suốt
 - [ ] Lighthouse Performance score > 85 trên mobile
 - [ ] Core Web Vitals: LCP < 2.5s, CLS < 0.1, FID < 100ms
 
 ### PWA
-- [ ] Manifest.json đúng (icon, name, display: standalone)
-- [ ] Service worker registered
-- [ ] Product images cached (CacheFirst strategy)
-- [ ] API responses cached ngắn hạn (NetworkFirst)
+- [x] Manifest.json đúng (icon, name, display: standalone) — `public/manifest.json` đầy đủ với shortcuts
+- [x] Service worker registered — `ServiceWorkerRegister.tsx` đăng ký `/sw.js`
+- [ ] Product images cached (CacheFirst strategy) — sw.js chưa có runtime caching config
+- [ ] API responses cached ngắn hạn (NetworkFirst) — chưa có
 - [ ] Install prompt hoạt động trên Android Chrome
 
 ### Admin Dashboard
-- [ ] CRUD sản phẩm từ admin panel
+- [~] CRUD sản phẩm từ admin panel — có list/search/hide/show; **chưa có form tạo mới / chỉnh sửa sản phẩm**
 - [ ] Upload ảnh với drag & drop
-- [ ] Quản lý order với cập nhật trạng thái
-- [ ] Xem và nhập tồn kho
+- [x] Quản lý order với cập nhật trạng thái — `/admin/orders` + `/admin/orders/[id]` với filter theo status
+- [x] Xem và nhập tồn kho — `/admin/inventory` với RestockModal gọi `/inventory/restock`
 - [ ] Export orders CSV
-- [ ] Admin routes bảo vệ đúng (redirect nếu không phải ADMIN)
+- [x] Admin routes bảo vệ đúng (redirect nếu không phải ADMIN) — layout kiểm tra `roles.includes("admin")`
+- [x] **[BONUS]** Quản lý Hero Banner — `/admin/hero` CRUD đầy đủ typography, slides, CTA, isActive
 
 ### SEO
-- [ ] Mỗi trang sản phẩm có unique title + meta description
-- [ ] Open Graph tags cho social sharing
-- [ ] Structured data (Product schema) trên trang sản phẩm
-- [ ] Sitemap.xml generate đúng tất cả products + categories
-- [ ] robots.txt đúng (block /admin, /api)
-- [ ] Canonical URLs
-- [ ] Next.js Image component cho tất cả product images
+- [x] Mỗi trang sản phẩm có unique title + meta description — `generateMetadata()` trong `/products/[slug]/page.tsx`
+- [x] Open Graph tags cho social sharing — có trong product page + home page
+- [x] Structured data (Product schema) trên trang sản phẩm — `JsonLd` + `buildProductSchema()`
+- [x] Sitemap.xml generate đúng tất cả products + categories — `sitemap.ts` fetch từ API
+- [x] robots.txt đúng (block /admin, /api) — `robots.ts` disallow `/api/`, `/admin/`
+- [x] Canonical URLs — `buildLocaleAlternates()` trong metadata
+- [x] Next.js Image component cho tất cả product images

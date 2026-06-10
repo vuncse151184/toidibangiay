@@ -4,14 +4,15 @@ import { motion } from "framer-motion"
 import { ShoppingBag, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { useAuthStore, type AuthState } from "@/store/auth.store"
-import { useCartStore, type CartState } from "@/store/cart.store"
+import { useCartStore, type CartState, type OptimisticItem } from "@/store/cart.store"
 
 type Props = {
   variantId: string
   disabled?: boolean
+  optimistic?: OptimisticItem
 }
 
-export default function AddToCartButton({ variantId, disabled }: Props) {
+export default function AddToCartButton({ variantId, disabled, optimistic }: Props) {
   const addItem = useCartStore((s: CartState) => s.addItem)
   const accessToken = useAuthStore((s: AuthState) => s.accessToken)
   const [loading, setLoading] = useState(false)
@@ -22,7 +23,7 @@ export default function AddToCartButton({ variantId, disabled }: Props) {
 
     setLoading(true)
     try {
-      await addItem(variantId, 1, accessToken)
+      await addItem(variantId, 1, accessToken, optimistic)
       setAdded(true)
       setTimeout(() => setAdded(false), 2000)
     } finally {

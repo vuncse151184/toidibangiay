@@ -56,7 +56,7 @@ function RegisterForm() {
       <div className="lg:hidden mb-8 flex justify-center">
         <Link href="/">
           <Image
-            src="https://res.cloudinary.com/dtov4zdy4/image/upload/v1773218437/ChatGPT_Image_Mar_11_2026_03_37_06_PM_1_iolztk.png"
+            src="/images/logo1.png"
             alt="Jumpman"
             width={80}
             height={80}
@@ -244,7 +244,7 @@ export default function RegisterPage() {
         >
           <Link href="/" className="flex items-center gap-3">
             <Image
-              src="https://res.cloudinary.com/dtov4zdy4/image/upload/v1773218437/ChatGPT_Image_Mar_11_2026_03_37_06_PM_1_iolztk.png"
+              src="/images/logo1.png"
               alt="Jumpman"
               width={56}
               height={56}

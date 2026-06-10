@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useState, useCallback } from "react"
-import { RefreshCw, ChevronRight } from "lucide-react"
+import { RefreshCw, ChevronRight, Download } from "lucide-react"
 import { backendClientFetch } from "@/lib/backend-client"
 import { useAuthStore, type AuthState } from "@/store/auth.store"
 import type { AdminOrder, OrderStatus, PaginatedMeta } from "@/types/admin"
@@ -39,6 +39,29 @@ const PAYMENT_LABELS = { VNPAY: "VNPay", MOMO: "MoMo", COD: "COD" }
 const ALL_STATUSES: Array<OrderStatus | ""> = [
   "", "PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED",
 ]
+
+function exportCSV(orders: AdminOrder[]) {
+  const header = ["Mã đơn", "Khách hàng", "Điện thoại", "Tổng tiền", "Thanh toán", "Trạng thái", "Ngày đặt"]
+  const rows = orders.map((o) => [
+    o.orderCode,
+    o.shippingAddress.fullName,
+    o.shippingAddress.phone,
+    o.total,
+    PAYMENT_LABELS[o.paymentMethod] ?? o.paymentMethod,
+    STATUS_LABELS[o.status],
+    new Date(o.createdAt).toLocaleString("vi-VN"),
+  ])
+  const csv = [header, ...rows]
+    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+    .join("\n")
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 function TableSkeleton() {
   return (
@@ -89,6 +112,14 @@ export default function AdminOrdersPage() {
           <h1 className="text-2xl font-bold text-white">Đơn hàng</h1>
           <p className="text-white/40 text-sm mt-1">{meta.total} đơn hàng</p>
         </div>
+        <button
+          onClick={() => exportCSV(orders)}
+          disabled={orders.length === 0}
+          className="flex items-center gap-2 px-4 py-2 text-sm text-white/60 border border-white/[0.08] rounded-xl hover:border-white/20 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        >
+          <Download size={14} />
+          Xuất CSV
+        </button>
       </div>
 
       {/* Status filter */}
