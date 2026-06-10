@@ -61,7 +61,7 @@ function Field({ label, value, onChange, mono }: { label: string; value: string;
 }
 
 export default function AdminHeroPage() {
-  const token = useAuthStore((s) => s.token)
+  const token = useAuthStore((s) => s.accessToken)
   const [data, setData] = useState<Omit<HeroBanner, "key">>(DEFAULT)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
