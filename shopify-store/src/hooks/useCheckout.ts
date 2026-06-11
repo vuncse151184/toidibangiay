@@ -15,7 +15,7 @@ export function useCheckout() {
 
   const checkout = async () => {
     if (!items.length) return
-    if (!accessToken) {
+    if (!accessToken) { 
       router.push("/login?from=/checkout")
       return
     }

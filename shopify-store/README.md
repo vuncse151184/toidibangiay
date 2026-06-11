@@ -484,3 +484,6 @@ Key benefits:
 * flexible commerce backend
 
 ---
+Email	admin@toidibangiay.vn
+Password	Admin@123456
+Roles	["CUSTOMER", "admin"]

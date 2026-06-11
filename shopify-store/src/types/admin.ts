@@ -59,8 +59,16 @@ export interface AdminProductVariant {
   color: string
   price: number
   compareAtPrice?: number
+  stock: number
   isActive: boolean
   image?: string
+}
+
+export interface AdminCategory {
+  id: string
+  name: string
+  slug: string
+  children: AdminCategory[]
 }
 
 export interface AdminProductImage {

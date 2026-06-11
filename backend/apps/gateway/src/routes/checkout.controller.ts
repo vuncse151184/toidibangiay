@@ -28,7 +28,7 @@ export class CheckoutController {
       method: 'POST',
       body: { paymentMethod: 'VNPAY' },
       authorization,
-      cookie,
+      cookie, 
     });
 
     const { orderId, orderCode, paymentUrl } = result.data;

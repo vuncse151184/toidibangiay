@@ -27,6 +27,29 @@ export class CreateVariantInlineDto {
   @IsInt()
   @Min(0)
   stock?: number;
+
+  @IsOptional()
+  @IsString()
+  image?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+export class CreateProductImageInlineDto {
+  @IsNotEmpty()
+  @IsString()
+  url: string;
+
+  @IsOptional()
+  @IsString()
+  altText?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  position?: number;
 }
 
 export class CreateProductDto {
@@ -60,6 +83,18 @@ export class CreateProductDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @ApiProperty({ type: [CreateProductImageInlineDto], required: false })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductImageInlineDto)
+  images?: CreateProductImageInlineDto[];
 
   @ApiProperty({ type: [CreateVariantInlineDto], required: false })
   @IsOptional()

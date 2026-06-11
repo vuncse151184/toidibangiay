@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../../generated/prisma';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -76,7 +76,7 @@ export class ProductsService {
   }
 
   async create(dto: CreateProductDto) {
-    const { variants, ...productData } = dto;
+    const { variants, images, ...productData } = dto;
 
     let slug = dto.slug ?? slugify(dto.name);
     const existing = await this.prisma.product.findUnique({ where: { slug } });
@@ -84,14 +84,23 @@ export class ProductsService {
       slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
     }
 
-    return this.prisma.product.create({
-      data: {
-        ...productData,
-        slug,
-        variants: variants?.length ? { create: variants } : undefined,
-      },
-      include: { variants: true, images: true, category: true },
-    });
+    try {
+      return await this.prisma.product.create({
+        data: {
+          ...productData,
+          slug,
+          images: images?.length ? { create: images } : undefined,
+          variants: variants?.length ? { create: variants } : undefined,
+        },
+        include: { variants: true, images: true, category: true },
+      });
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        const field = err.meta?.target?.[0] ?? 'field';
+        throw new ConflictException(`Duplicate value for ${field}`);
+      }
+      throw err;
+    }
   }
 
   async addImage(productSlug: string, url: string, altText?: string, position = 0) {

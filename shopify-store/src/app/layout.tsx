@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { buildOrganizationSchema, defaultMetadata } from "@/lib/seo"
 import { Providers } from "./providers"
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister"
+import { Toaster } from "@/components/ui/sonner"
 
 export const metadata: Metadata = {
   ...defaultMetadata,
@@ -35,6 +36,7 @@ export default function RootLayout({
         <ServiceWorkerRegister />
         <JsonLd data={buildOrganizationSchema()} />
         <Providers>{children}</Providers>
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   )

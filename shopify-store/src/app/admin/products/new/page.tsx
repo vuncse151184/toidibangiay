@@ -1,12 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react"
-import ImageUpload from "@/components/ui/ImageUpload"
-import { backendClientFetch } from "@/lib/backend-client"
+import { toast } from "sonner"
+import ImageMultiUpload from "@/components/ui/ImageMultiUpload"
+import PriceInput from "@/components/ui/PriceInput"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { backendClientFetch, ApiError } from "@/lib/backend-client"
+import { uploadFileToCloudinary, countPendingFiles } from "@/lib/upload"
 import { useAuthStore, type AuthState } from "@/store/auth.store"
+import type { AdminCategory } from "@/types/admin"
 
 type VariantRow = {
   tempId: string
@@ -15,13 +20,14 @@ type VariantRow = {
   color: string
   price: string
   compareAtPrice: string
+  stock: string
   isActive: boolean
-  image: string
+  images: Array<File | string>
 }
 
 const newVariant = (): VariantRow => ({
   tempId: Math.random().toString(36).slice(2),
-  sku: "", size: "", color: "", price: "", compareAtPrice: "", isActive: true, image: "",
+  sku: "", size: "", color: "", price: "", compareAtPrice: "", stock: "0", isActive: true, images: [],
 })
 
 const inputCls = "w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20"
@@ -39,6 +45,32 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
   )
 }
 
+async function resolveImages(
+  variants: VariantRow[],
+  toastId: string | number,
+): Promise<VariantRow[]> {
+  const total = variants.reduce((n, v) => n + countPendingFiles(v.images), 0)
+  if (total === 0) return variants
+
+  let done = 0
+  toast.loading(`Đang upload ảnh 0/${total}...`, { id: toastId })
+
+  return Promise.all(
+    variants.map(async (v) => {
+      const images = await Promise.all(
+        v.images.map(async (img) => {
+          if (!(img instanceof File)) return img
+          const url = await uploadFileToCloudinary(img, "toidibangiay/products")
+          done++
+          toast.loading(`Đang upload ảnh ${done}/${total}...`, { id: toastId })
+          return url
+        }),
+      )
+      return { ...v, images }
+    }),
+  )
+}
+
 export default function AdminProductNewPage() {
   const router = useRouter()
   const accessToken = useAuthStore((s: AuthState) => s.accessToken)
@@ -47,19 +79,34 @@ export default function AdminProductNewPage() {
   const [brand, setBrand] = useState("")
   const [description, setDescription] = useState("")
   const [isActive, setIsActive] = useState(true)
+  const [categoryId, setCategoryId] = useState("")
+  const [categories, setCategories] = useState<AdminCategory[]>([])
   const [variants, setVariants] = useState<VariantRow[]>([newVariant()])
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState("")
 
-  const updateVariant = (tempId: string, field: keyof VariantRow, value: string | boolean) =>
+  useEffect(() => {
+    backendClientFetch<AdminCategory[]>("/categories", { accessToken }).then(setCategories).catch(() => {})
+  }, [accessToken])
+
+  const updateVariant = (tempId: string, field: keyof VariantRow, value: string | boolean | Array<File | string>) =>
     setVariants((prev) => prev.map((r) => (r.tempId === tempId ? { ...r, [field]: value } : r)))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    const validVariants = variants.filter((v) => v.sku && v.price)
+    const skus = validVariants.map((v) => v.sku)
+    const dupSku = skus.find((s, i) => skus.indexOf(s) !== i)
+    if (dupSku) {
+      toast.error("SKU bị trùng", { description: `"${dupSku}" đã được dùng ở biến thể khác` })
+      return
+    }
+
     setSaving(true)
+    const toastId = toast.loading("Đang chuẩn bị...")
     try {
-      const validVariants = variants.filter((v) => v.sku && v.price)
+      const resolved = await resolveImages(validVariants, toastId)
+
+      toast.loading("Đang tạo sản phẩm...", { id: toastId })
       await backendClientFetch("/products", {
         accessToken,
         method: "POST",
@@ -68,24 +115,32 @@ export default function AdminProductNewPage() {
           brand: brand || undefined,
           description: description || undefined,
           isActive,
-          // derive product-level images from variant images (for storefront gallery)
-          images: validVariants
-            .filter((v) => v.image)
-            .map((v, i) => ({ url: v.image, altText: v.color || v.sku, position: i })),
-          variants: validVariants.map((v) => ({
+          categoryId: categoryId || undefined,
+          images: resolved
+            .flatMap((v) => v.images as string[])
+            .map((url, i) => ({ url, altText: "", position: i })),
+          variants: resolved.map((v) => ({
             sku: v.sku,
             size: v.size || undefined,
             color: v.color || undefined,
             price: Number(v.price),
             compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : undefined,
+            stock: Number(v.stock) || 0,
             isActive: v.isActive,
-            image: v.image || undefined,
+            image: (v.images[0] as string) || undefined,
           })),
         }),
       })
+      toast.success("Tạo sản phẩm thành công", { id: toastId })
       router.push("/admin/products")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Lưu thất bại")
+      const isApi = err instanceof ApiError
+      toast.error(isApi ? err.label : "Lưu thất bại", {
+        id: toastId,
+        description: isApi && err.messages.length > 1
+          ? err.messages.join(" • ")
+          : err instanceof Error ? err.message : undefined,
+      })
       setSaving(false)
     }
   }
@@ -99,17 +154,9 @@ export default function AdminProductNewPage() {
         <h1 className="text-2xl font-bold text-white">Thêm sản phẩm</h1>
       </div>
 
-      {error && (
-        <div className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-          {error}
-        </div>
-      )}
-
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic info */}
         <section className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 space-y-4">
           <h2 className="text-sm font-semibold text-white">Thông tin cơ bản</h2>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-white/40 mb-1.5">Tên sản phẩm *</label>
@@ -120,7 +167,34 @@ export default function AdminProductNewPage() {
               <input value={brand} onChange={(e) => setBrand(e.target.value)} className={inputCls} placeholder="Nike" />
             </div>
           </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-white/40 mb-1.5">Collection</label>
+              <Select value={categoryId || "__none__"} onValueChange={(v) => setCategoryId(v === "__none__" ? "" : v)}>
+                <SelectTrigger className="w-full h-auto px-3.5 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white focus:border-white/20 focus:ring-0 data-placeholder:text-white/30">
+                  <SelectValue placeholder="— Không có collection —" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Không có collection —</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectGroup key={cat.id}>
+                      <SelectLabel>{cat.name}</SelectLabel>
+                      <SelectItem value={cat.id}>{cat.name}</SelectItem>
+                      {cat.children.map((child) => (
+                        <SelectItem key={child.id} value={child.id}>{child.name}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end pb-0.5">
+              <div className="flex items-center gap-3">
+                <Toggle value={isActive} onChange={setIsActive} />
+                <span className="text-sm text-white/60">{isActive ? "Hiển thị trên storefront" : "Ẩn khỏi storefront"}</span>
+              </div>
+            </div>
+          </div>
           <div>
             <label className="block text-xs text-white/40 mb-1.5">Mô tả</label>
             <textarea
@@ -131,19 +205,13 @@ export default function AdminProductNewPage() {
               placeholder="Mô tả ngắn về sản phẩm..."
             />
           </div>
-
-          <div className="flex items-center gap-3">
-            <Toggle value={isActive} onChange={setIsActive} />
-            <span className="text-sm text-white/60">{isActive ? "Hiển thị trên storefront" : "Ẩn khỏi storefront"}</span>
-          </div>
         </section>
 
-        {/* Variants */}
         <section className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-white">Biến thể ({variants.length})</h2>
-              <p className="text-xs text-white/30 mt-0.5">Mỗi biến thể có ảnh riêng</p>
+              <p className="text-xs text-white/30 mt-0.5">Mỗi SKU là một biến thể riêng</p>
             </div>
             <button
               type="button"
@@ -156,8 +224,8 @@ export default function AdminProductNewPage() {
 
           <div className="space-y-4">
             {variants.map((v, i) => (
-              <div key={v.tempId} className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl">
-                <div className="flex items-center justify-between mb-3">
+              <div key={v.tempId} className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
                   <span className="text-xs text-white/40">Biến thể {i + 1}</span>
                   {variants.length > 1 && (
                     <button
@@ -170,52 +238,56 @@ export default function AdminProductNewPage() {
                   )}
                 </div>
 
-                <div className="flex gap-4">
-                  {/* Per-variant image */}
-                  <div className="w-[88px] flex-shrink-0">
-                    <p className="text-[11px] text-white/30 mb-1">Ảnh</p>
-                    <ImageUpload
-                      value={v.image}
-                      onChange={(url) => updateVariant(v.tempId, "image", url)}
-                      folder="toidibangiay/products"
-                      aspectRatio="1/1"
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-white/30 mb-1">SKU *</label>
+                    <input value={v.sku} onChange={(e) => updateVariant(v.tempId, "sku", e.target.value)} className={smallInputCls} placeholder="NK-270-BLK-42" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-white/30 mb-1">Size</label>
+                    <input value={v.size} onChange={(e) => updateVariant(v.tempId, "size", e.target.value)} className={smallInputCls} placeholder="42" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-white/30 mb-1">Màu</label>
+                    <input value={v.color} onChange={(e) => updateVariant(v.tempId, "color", e.target.value)} className={smallInputCls} placeholder="Black" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-white/30 mb-1">Tồn kho</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={v.stock}
+                      onChange={(e) => updateVariant(v.tempId, "stock", e.target.value.replace(/\D/g, ""))}
+                      className={smallInputCls}
+                      placeholder="0"
                     />
                   </div>
-
-                  {/* Fields */}
-                  <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] text-white/30 mb-1">SKU *</label>
-                      <input value={v.sku} onChange={(e) => updateVariant(v.tempId, "sku", e.target.value)} className={smallInputCls} placeholder="NK-270-BLK-42" />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-white/30 mb-1">Size</label>
-                      <input value={v.size} onChange={(e) => updateVariant(v.tempId, "size", e.target.value)} className={smallInputCls} placeholder="42" />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-white/30 mb-1">Màu</label>
-                      <input value={v.color} onChange={(e) => updateVariant(v.tempId, "color", e.target.value)} className={smallInputCls} placeholder="Black" />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-white/30 mb-1">Giá *</label>
-                      <input type="number" min={0} value={v.price} onChange={(e) => updateVariant(v.tempId, "price", e.target.value)} className={smallInputCls} placeholder="2500000" />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-white/30 mb-1">Giá gốc</label>
-                      <input type="number" min={0} value={v.compareAtPrice} onChange={(e) => updateVariant(v.tempId, "compareAtPrice", e.target.value)} className={smallInputCls} placeholder="3000000" />
-                    </div>
-                    <div className="flex items-end gap-2 pb-1">
-                      <Toggle value={v.isActive} onChange={(val) => updateVariant(v.tempId, "isActive", val)} />
-                      <span className="text-xs text-white/40">{v.isActive ? "Hiển thị" : "Ẩn"}</span>
-                    </div>
+                  <div>
+                    <label className="block text-[11px] text-white/30 mb-1">Giá *</label>
+                    <PriceInput value={v.price} onChange={(val) => updateVariant(v.tempId, "price", val)} className={smallInputCls} placeholder="2.500.000" />
                   </div>
+                  <div>
+                    <label className="block text-[11px] text-white/30 mb-1">Giá gốc</label>
+                    <PriceInput value={v.compareAtPrice} onChange={(val) => updateVariant(v.tempId, "compareAtPrice", val)} className={smallInputCls} placeholder="3.000.000" />
+                  </div>
+                  <div className="flex items-end gap-2 pb-1 col-span-2 md:col-span-2">
+                    <Toggle value={v.isActive} onChange={(val) => updateVariant(v.tempId, "isActive", val)} />
+                    <span className="text-xs text-white/40">{v.isActive ? "Hiển thị" : "Ẩn"}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-white/[0.04]">
+                  <p className="text-[11px] text-white/30 mb-2">Ảnh biến thể</p>
+                  <ImageMultiUpload
+                    value={v.images}
+                    onChange={(imgs) => updateVariant(v.tempId, "images", imgs)}
+                  />
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Actions */}
         <div className="flex items-center gap-3 pb-8">
           <button
             type="submit"

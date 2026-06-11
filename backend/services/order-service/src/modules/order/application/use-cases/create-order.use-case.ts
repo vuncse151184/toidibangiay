@@ -6,7 +6,7 @@ import { CreateOrderDto } from '../dto/create-order.dto';
 @Injectable()
 export class CreateOrderUseCase {
   constructor(private readonly prisma: PrismaService) {}
-
+ 
   async execute(userId: string, dto: CreateOrderDto, authorization: string) {
     // Forward JWT token — Cart Service dùng OptionalJwtAuthGuard, cần Authorization header
     const cartResponse = await fetch(`${env.CART_SERVICE_URL}/api/cart`, {

@@ -2,7 +2,7 @@ const CACHE_VERSION = 'v1';
 const IMAGE_CACHE = `toidibangiay-images-${CACHE_VERSION}`;
 const API_CACHE = `toidibangiay-api-${CACHE_VERSION}`;
 
-const IMAGE_HOSTS = ['amazonaws.com', 'cloudfront.net', 'static.nike.com'];
+const IMAGE_HOSTS = ['res.cloudinary.com', 'static.nike.com'];
 const API_PATHS = ['/api/products', '/api/collections'];
 
 self.addEventListener('install', () => {
