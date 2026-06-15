@@ -144,13 +144,15 @@ export default function SocialLoginButtons({ redirectTo = "/" }: Props) {
     setError("")
     setLoadingFacebook(true)
     window.FB.login(
-      async (response) => {
+      (response) => {
         if (response.authResponse?.accessToken) {
-          await handleOAuth("facebook", response.authResponse.accessToken)
+          handleOAuth("facebook", response.authResponse.accessToken).finally(() => {
+            setLoadingFacebook(false)
+          })
         } else {
           setError("Đăng nhập Facebook bị huỷ hoặc thất bại")
+          setLoadingFacebook(false)
         }
-        setLoadingFacebook(false)
       },
       { scope: "email,public_profile" },
     )
