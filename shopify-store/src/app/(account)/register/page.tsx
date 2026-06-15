@@ -260,10 +260,7 @@ export default function RegisterPage() {
               width={56}
               height={56}
             />
-            <div>
-              <p className="text-white font-bold text-sm tracking-wide leading-none">Toidibangiay</p>
-              <p className="text-white/30 text-[10px] tracking-[0.2em] uppercase mt-0.5">Sneaker chính hãng</p>
-            </div>
+            
           </Link>
         </motion.div>
 
