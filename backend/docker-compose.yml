@@ -1,4 +1,6 @@
-services:
+﻿services:
+
+  # ─── Infrastructure ───────────────────────────────────────────────────────────
 
   postgres:
     image: postgres:15
@@ -15,6 +17,11 @@ services:
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - ecommerce_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecommerce"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7
@@ -25,9 +32,14 @@ services:
     volumes:
       - redis_data:/data
       - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
-    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     networks:
       - ecommerce_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -43,6 +55,306 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - ecommerce_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  opensearch:
+    image: opensearchproject/opensearch:2.17.0
+    container_name: ecommerce_opensearch
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - DISABLE_SECURITY_PLUGIN=true
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    networks:
+      - ecommerce_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.17.0
+    container_name: ecommerce_opensearch_dashboards
+    restart: always
+    environment:
+      - OPENSEARCH_HOSTS=http://opensearch:9200
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+    ports:
+      - "5601:5601"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    networks:
+      - ecommerce_network
+
+  # ─── Backend Services ─────────────────────────────────────────────────────────
+
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: ../../Dockerfile.service
+    container_name: ecommerce_user_service
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+      NODE_ENV: development
+      DATABASE_URL: postgresql://ecommerce:ecommerce@postgres:5432/ecommerce
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: dev-secret-32chars-minimum-please-change
+      JWT_ACCESS_TTL_SECONDS: 900
+      REFRESH_TOKEN_TTL_DAYS: 30
+      FRONTEND_URL: http://localhost:3000
+      COOKIE_SECURE: "false"
+      COOKIE_SAME_SITE: lax
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ecommerce_network
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: ../../Dockerfile.service
+    container_name: ecommerce_auth_service
+    restart: unless-stopped
+    environment:
+      PORT: 3002
+      NODE_ENV: development
+      DATABASE_URL: postgresql://ecommerce:ecommerce@postgres:5432/ecommerce
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: dev-secret-32chars-minimum-please-change
+      JWT_ACCESS_TTL_SECONDS: 900
+      REFRESH_TOKEN_TTL_DAYS: 30
+      FRONTEND_URL: http://localhost:3000
+      COOKIE_SECURE: "false"
+      COOKIE_SAME_SITE: lax
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_SECURE: "false"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: "Tôi Đi Bán Giày <no-reply@toidibangiay.vn>"
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ecommerce_network
+
+  product-service:
+    build:
+      context: ./services/product-service
+      dockerfile: ../../Dockerfile.service
+    container_name: ecommerce_product_service
+    restart: unless-stopped
+    environment:
+      PORT: 4001
+      NODE_ENV: development
+      DATABASE_URL: postgresql://ecommerce:ecommerce@postgres:5432/ecommerce
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
+    ports:
+      - "4001:4001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecommerce_network
+
+  inventory-service:
+    build:
+      context: ./services/inventory-service
+      dockerfile: ../../Dockerfile.service
+    container_name: ecommerce_inventory_service
+    restart: unless-stopped
+    environment:
+      PORT: 3005
+      NODE_ENV: development
+      DATABASE_URL: postgresql://ecommerce:ecommerce@postgres:5432/ecommerce
+      JWT_ACCESS_SECRET: dev-secret-32chars-minimum-please-change
+    ports:
+      - "3005:3005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ecommerce_network
+
+  cart-service:
+    build:
+      context: ./services/cart-service
+      dockerfile: ../../Dockerfile.service
+    container_name: ecommerce_cart_service
+    restart: unless-stopped
+    environment:
+      PORT: 3003
+      NODE_ENV: development
+      DATABASE_URL: postgresql://ecommerce:ecommerce@postgres:5432/ecommerce
+      JWT_ACCESS_SECRET: dev-secret-32chars-minimum-please-change
+      PRODUCT_SERVICE_URL: http://product-service:4001
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+    networks:
+      - ecommerce_network
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: ../../Dockerfile.service
+    container_name: ecommerce_notification_service
+    restart: unless-stopped
+    environment:
+      PORT: 3007
+      NODE_ENV: development
+      DATABASE_URL: postgresql://ecommerce:ecommerce@postgres:5432/ecommerce
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_SECURE: "false"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: "Tôi Đi Bán Giày <no-reply@toidibangiay.vn>"
+    ports:
+      - "3007:3007"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ecommerce_network
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: ../../Dockerfile.service
+    container_name: ecommerce_payment_service
+    restart: unless-stopped
+    environment:
+      PORT: 3006
+      NODE_ENV: development
+      DATABASE_URL: postgresql://ecommerce:ecommerce@postgres:5432/ecommerce
+      JWT_ACCESS_SECRET: dev-secret-32chars-minimum-please-change
+      ORDER_SERVICE_URL: http://order-service:3004
+      NOTIFICATION_SERVICE_URL: http://notification-service:3007
+      API_BASE_URL: http://gateway:4000
+      FRONTEND_URL: http://localhost:3000
+      VNPAY_URL: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+      VNPAY_TMN_CODE: ""
+      VNPAY_HASH_SECRET: ""
+    ports:
+      - "3006:3006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      notification-service:
+        condition: service_started
+    networks:
+      - ecommerce_network
+
+  order-service:
+    build:
+      context: ./services/order-service
+      dockerfile: ../../Dockerfile.service
+    container_name: ecommerce_order_service
+    restart: unless-stopped
+    environment:
+      PORT: 3004
+      NODE_ENV: development
+      DATABASE_URL: postgresql://ecommerce:ecommerce@postgres:5432/ecommerce
+      JWT_ACCESS_SECRET: dev-secret-32chars-minimum-please-change
+      CART_SERVICE_URL: http://cart-service:3003
+      PRODUCT_SERVICE_URL: http://product-service:4001
+      INVENTORY_SERVICE_URL: http://inventory-service:3005
+      PAYMENT_SERVICE_URL: http://payment-service:3006
+      NOTIFICATION_SERVICE_URL: http://notification-service:3007
+      USER_SERVICE_URL: http://user-service:3001
+    ports:
+      - "3004:3004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      cart-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    networks:
+      - ecommerce_network
+
+  search-service:
+    build:
+      context: ./services/search-service
+      dockerfile: Dockerfile
+    container_name: ecommerce_search_service
+    restart: unless-stopped
+    environment:
+      PORT: 3008
+      OPENSEARCH_ENDPOINT: http://opensearch:9200
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
+      DATABASE_URL: postgresql://ecommerce:ecommerce@postgres:5432/ecommerce
+    ports:
+      - "3008:3008"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ecommerce_network
+
+  gateway:
+    build:
+      context: ./apps/gateway
+      dockerfile: ../../Dockerfile.service
+    container_name: ecommerce_gateway
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      NODE_ENV: development
+      JWT_ACCESS_SECRET: dev-secret-32chars-minimum-please-change
+      FRONTEND_URL: http://localhost:3000
+      PRODUCT_SERVICE_URL: http://product-service:4001
+      AUTH_SERVICE_URL: http://auth-service:3002/api
+      CART_SERVICE_URL: http://cart-service:3003/api
+      ORDER_SERVICE_URL: http://order-service:3004/api
+      INVENTORY_SERVICE_URL: http://inventory-service:3005/api
+      PAYMENT_SERVICE_URL: http://payment-service:3006/api
+      NOTIFICATION_SERVICE_URL: http://notification-service:3007/api
+    ports:
+      - "4000:4000"
+    depends_on:
+      - user-service
+      - auth-service
+      - product-service
+      - cart-service
+      - order-service
+      - inventory-service
+      - payment-service
+      - notification-service
+    networks:
+      - ecommerce_network
 
 networks:
   ecommerce_network:
@@ -52,3 +364,4 @@ volumes:
   postgres_data:
   redis_data:
   rabbitmq_data:
+  opensearch_data:

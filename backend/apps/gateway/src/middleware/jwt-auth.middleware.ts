@@ -14,7 +14,7 @@ export class JwtAuthMiddleware implements NestMiddleware {
     const token = authHeader.slice(7);
     try {
       const payload = jwt.verify(token, env.JWT_ACCESS_SECRET) as jwt.JwtPayload;
-      req['user'] = payload;
+      (req as unknown as { user: jwt.JwtPayload })['user'] = payload ;
       next();
     } catch {
       throw new UnauthorizedException('Invalid or expired token');

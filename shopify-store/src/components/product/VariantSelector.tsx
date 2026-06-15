@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react"
 import { motion } from "framer-motion"
 import type { ProductVariant } from "@/types/product"
+import SizeGuideModal from "./SizeGuideModal"
 
 type Props = {
   variants: ProductVariant[]
@@ -47,6 +48,7 @@ export default function VariantSelector({ variants, selected, onSelect }: Props)
   const [activeColor, setActiveColor] = useState(activeEntry?.color ?? "")
   const [activeSize, setActiveSize] = useState(activeEntry?.size ?? null)
   const [activeGender, setActiveGender] = useState(activeEntry?.gender ?? null)
+  const [isGuideOpen, setIsGuideOpen] = useState(false)
 
   if (!variants.length) return null
 
@@ -235,6 +237,23 @@ export default function VariantSelector({ variants, selected, onSelect }: Props)
             })}
           </div>
         </div>
+      )}
+
+      {/* ——— SIZE GUIDE ——— */}
+      {sizes.length > 0 && (
+        <>
+          <button
+            onClick={() => setIsGuideOpen(true)}
+            className="text-[11px] text-red-500/70 hover:text-red-400 transition-colors tracking-wider uppercase underline underline-offset-2 -mt-3"
+          >
+            Hướng dẫn chọn size
+          </button>
+          <SizeGuideModal
+            isOpen={isGuideOpen}
+            onClose={() => setIsGuideOpen(false)}
+            selectedSize={activeSize ? Number(activeSize) : null}
+          />
+        </>
       )}
 
       {/* ——— GENDER PICKER ——— */}

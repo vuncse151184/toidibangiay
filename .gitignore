@@ -100,3 +100,8 @@ docker-compose.local.yml
 # OTHERS
 # ============================================================
 ecomerce-architecture-plan.pptx
+
+skills-lock.json
+iam_policy.json
+*.claude
+k8s

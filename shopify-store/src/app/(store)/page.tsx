@@ -1,10 +1,10 @@
-import Hero from "@/components/sections/Hero"
+import SneakerHero from "@/components/sections/SneakerHero"
 import FeaturedProducts from "@/components/sections/FeaturedProducts"
 
 export default function HomePage() {
   return (
     <div>
-      <Hero />
+      <SneakerHero />
       <FeaturedProducts />
     </div>
   )

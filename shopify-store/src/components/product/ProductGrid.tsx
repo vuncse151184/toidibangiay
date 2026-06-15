@@ -45,7 +45,7 @@ export default function ProductGrid() {
           className="animate-fade-in-up"
           style={{ animationDelay: `${index * 60}ms` }}
         >
-          <ProductCard product={product} />
+          <ProductCard product={product} priority={index < 2} />
         </div>
       ))}
     </div>

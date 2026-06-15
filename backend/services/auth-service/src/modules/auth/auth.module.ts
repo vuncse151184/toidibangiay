@@ -12,9 +12,11 @@ import { RefreshSessionUseCase } from './application/use-cases/refresh-session.u
 import { LogoutUseCase } from './application/use-cases/logout.use-case';
 import { ForgotPasswordUseCase } from './application/use-cases/forgot-password.use-case';
 import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case';
+import { SocialLoginUseCase } from './application/use-cases/social-login.use-case';
 import { VerifyEmailUseCase } from './application/use-cases/verify-email.use-case';
 import { IDENTITY_REPOSITORY } from './domain/ports/identity.repository.port';
 import { SESSION_REPOSITORY } from './domain/ports/session.repository.port';
+import { SOCIAL_IDENTITY_REPOSITORY } from './domain/ports/social-identity.repository.port';
 import { USER_REPOSITORY } from './domain/ports/user.repository.port';
 import { PASSWORD_RESET_REPOSITORY } from './domain/ports/password-reset.repository.port';
 import { VERIFICATION_TOKEN_REPOSITORY } from './domain/ports/verification-token.repository.port';
@@ -27,6 +29,7 @@ import { PrismaSessionRepository } from './infrastructure/persistence/prisma-ses
 import { PrismaPasswordResetRepository } from './infrastructure/persistence/prisma-password-reset.repository';
 import { PrismaVerificationTokenRepository } from './infrastructure/persistence/prisma-verification-token.repository';
 import { PrismaAuditLogRepository } from './infrastructure/persistence/prisma-audit-log.repository';
+import { PrismaSocialIdentityRepository } from './infrastructure/persistence/prisma-social-identity.repository';
 import { RedisRateLimitService } from './infrastructure/services/redis-rate-limit.service';
 
 @Module({
@@ -41,6 +44,7 @@ import { RedisRateLimitService } from './infrastructure/services/redis-rate-limi
     ForgotPasswordUseCase,
     ResetPasswordUseCase,
     VerifyEmailUseCase,
+    SocialLoginUseCase,
     { provide: EMAIL_SENDER, useClass: SmtpEmailSenderService },
     { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasherService },
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
@@ -50,6 +54,7 @@ import { RedisRateLimitService } from './infrastructure/services/redis-rate-limi
     { provide: VERIFICATION_TOKEN_REPOSITORY, useClass: PrismaVerificationTokenRepository },
     { provide: AUDIT_LOG_REPOSITORY, useClass: PrismaAuditLogRepository },
     { provide: LOGIN_RATE_LIMIT_SERVICE, useClass: RedisRateLimitService },
+    { provide: SOCIAL_IDENTITY_REPOSITORY, useClass: PrismaSocialIdentityRepository },
   ],
 })
 export class AuthModule {}

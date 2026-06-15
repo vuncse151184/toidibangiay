@@ -43,7 +43,8 @@ export default function Footer() {
           {/* Brand column */}
           <div className="lg:col-span-4">
             <Link href="/" className="inline-flex items-center gap-3 group">
-              <Image src="/images/logo3.png" alt="Jumpman" width={320} height={320} />
+              <Image 
+           src="https://res.cloudinary.com/dtmy1ys91/image/upload/v1781488046/logo1_zvbvi7.png" alt="Jumpman" width={320} height={320} />
             </Link>
 
             <p className="mt-5 text-sm text-white/35 leading-relaxed max-w-xs">

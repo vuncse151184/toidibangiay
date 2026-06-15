@@ -9,7 +9,7 @@ Tài liệu này chia làm 2 phần: **Demo (hiện tại)** và **Production (k
 ## Tổng Quan Demo
 
 ```
-Region: ap-southeast-1 (Singapore)
+Region: us-east-2 (Singapore)
 
 [Vercel — Next.js]  (Free)
         │
@@ -45,7 +45,7 @@ Region: ap-southeast-1 (Singapore)
 - Instance type: `t2.micro` (free tier 750hr/tháng năm đầu) hoặc `t3.small` (~$15/tháng nếu hết free tier)
 - AMI: Amazon Linux 2023
 - Storage: 20GB gp3 (free tier: 30GB)
-- Region: `ap-southeast-1`
+- Region: `us-east-2`
 
 **Security Group (sg-demo-ec2):**
 
@@ -260,7 +260,7 @@ log_min_duration_statement = 1000   (log query > 1s)
 
 **S3 Bucket:**
 - Tên: `toidibangiay-media-demo`
-- Region: `ap-southeast-1`
+- Region: `us-east-2`
 - Block all public access: **Yes**
 - Versioning: Disabled (tiết kiệm storage cho demo)
 
@@ -338,7 +338,7 @@ NODE_ENV=production
 PORT=3000
 
 # Database (RDS endpoint)
-DATABASE_URL=postgresql://postgres:<password>@<rds-endpoint>.ap-southeast-1.rds.amazonaws.com:5432/toidibangiay
+DATABASE_URL=postgresql://postgres:<password>@<rds-endpoint>.us-east-2.rds.amazonaws.com:5432/toidibangiay
 
 # Per-schema DATABASE_URL (NestJS monolith với Prisma multi-schema)
 AUTH_DATABASE_URL=postgresql://postgres:<password>@<rds-endpoint>:5432/toidibangiay?schema=auth
@@ -360,13 +360,13 @@ JWT_ACCESS_EXPIRES=15m
 JWT_REFRESH_EXPIRES=30d
 
 # AWS
-AWS_REGION=ap-southeast-1
+AWS_REGION=us-east-2
 AWS_S3_BUCKET=toidibangiay-media-demo
 CDN_URL=https://cdn.toidibangiay.vn
 
 # SES (email — free 62k/tháng từ EC2)
 AWS_SES_FROM_EMAIL=noreply@toidibangiay.vn
-AWS_SES_REGION=ap-southeast-1
+AWS_SES_REGION=us-east-2
 
 # Payment (VNPay / MoMo sandbox cho demo)
 VNPAY_TMN_CODE=<sandbox-code>

@@ -2,9 +2,12 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ReactNode, useState } from "react"
+import { GoogleOAuthProvider } from "@react-oauth/google"
 import { AuthBootstrap } from "@/components/auth/AuthBootstrap"
 import { CartBootstrap } from "@/components/cart/CartBootstrap"
 import { SmoothScroll } from "@/lib/lenis"
+
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ""
 
 function makeQueryClient() {
   return new QueryClient({
@@ -27,10 +30,12 @@ export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(() => makeQueryClient())
 
   return (
-    <QueryClientProvider client={client}>
-      <AuthBootstrap />
-      <CartBootstrap />
-      <SmoothScroll>{children}</SmoothScroll>
-    </QueryClientProvider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <QueryClientProvider client={client}>
+        <AuthBootstrap />
+        <CartBootstrap />
+        <SmoothScroll>{children}</SmoothScroll>
+      </QueryClientProvider>
+    </GoogleOAuthProvider>
   )
 }

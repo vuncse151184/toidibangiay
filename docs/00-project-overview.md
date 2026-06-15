@@ -361,7 +361,7 @@ REDIS_URL=redis://elasticache-host:6379
 RABBITMQ_URL=amqps://user:pass@amazonmq-host:5671
 
 # AWS
-AWS_REGION=ap-southeast-1
+AWS_REGION=us-east-2
 AWS_S3_BUCKET=toidibangiay-media
 AWS_SES_FROM_EMAIL=no-reply@toidibangiay.vn
 

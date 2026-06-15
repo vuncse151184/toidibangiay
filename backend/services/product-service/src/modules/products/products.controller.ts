@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AddImageDto } from './dto/add-image.dto';
 import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 import { SearchProductDto } from './dto/search-product.dto';
 import { ProductsService } from './products.service';
 
@@ -16,6 +17,12 @@ export class ProductsController {
     return this.productsService.search(query);
   }
 
+  @Get('by-id/:id')
+  @ApiOperation({ summary: 'Chi tiết sản phẩm theo ID (Admin)' })
+  findById(@Param('id') id: string) {
+    return this.productsService.findById(id);
+  }
+
   @Get(':slug')
   @ApiOperation({ summary: 'Chi tiết sản phẩm theo slug' })
   findOne(@Param('slug') slug: string) {
@@ -26,6 +33,12 @@ export class ProductsController {
   @ApiOperation({ summary: 'Tạo sản phẩm mới (Admin)' })
   create(@Body() dto: CreateProductDto) {
     return this.productsService.create(dto);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Cập nhật sản phẩm (Admin)' })
+  update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
+    return this.productsService.update(id, dto);
   }
 
   @Post(':slug/images')

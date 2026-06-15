@@ -7,6 +7,7 @@ import Image from "next/image"
 import { motion } from "framer-motion"
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from "lucide-react"
 import { useAuthStore, type AuthState } from "@/store/auth.store"
+import SocialLoginButtons from "@/components/auth/SocialLoginButtons"
 
 function RegisterForm() {
   const router = useRouter()
@@ -56,7 +57,9 @@ function RegisterForm() {
       <div className="lg:hidden mb-8 flex justify-center">
         <Link href="/">
           <Image
-            src="/images/logo1.png"
+           
+           src="https://res.cloudinary.com/dtmy1ys91/image/upload/v1781488046/logo1_zvbvi7.png"
+            loading="eager"
             alt="Jumpman"
             width={80}
             height={80}
@@ -190,6 +193,12 @@ function RegisterForm() {
         <div className="h-px flex-1 bg-white/[0.07]" />
       </div>
 
+      <SocialLoginButtons />
+
+      <div className="flex items-center gap-4 my-5">
+        <div className="h-px flex-1 bg-white/[0.07]" />
+      </div>
+
       <p className="text-center text-sm text-white/40">
         Đã có tài khoản?{" "}
         <Link href="/login" className="text-red-400 hover:text-red-300 font-semibold transition-colors">
@@ -244,8 +253,10 @@ export default function RegisterPage() {
         >
           <Link href="/" className="flex items-center gap-3">
             <Image
-              src="/images/logo1.png"
+             
+           src="https://res.cloudinary.com/dtmy1ys91/image/upload/v1781488046/logo1_zvbvi7.png"
               alt="Jumpman"
+              loading="eager"
               width={56}
               height={56}
             />
@@ -342,21 +353,21 @@ export default function RegisterPage() {
 
         {/* Player — bottom-anchored, float animation */}
         <div className="absolute inset-0 flex items-end justify-center">
-           
-            <Image
-              src="/images/login-poster-3.png"
-              alt="Sneaker poster"
-              width={600}
-              height={900}
-              priority
-              style={{
-                height: "100vh",
-                width: "auto",
-                objectFit: "contain",
-                filter:
-                  "drop-shadow(0 0 56px rgba(220,38,38,0.48)) drop-shadow(0 32px 52px rgba(0,0,0,0.95))",
-              }}
-            /> 
+
+          <Image
+            src="/images/login-poster-3.png"
+            alt="Sneaker poster"
+            width={600}
+            height={900}
+            priority
+            style={{
+              height: "100vh",
+              width: "auto",
+              objectFit: "contain",
+              filter:
+                "drop-shadow(0 0 56px rgba(220,38,38,0.48)) drop-shadow(0 32px 52px rgba(0,0,0,0.95))",
+            }}
+          />
         </div>
 
         {/* ── Edge gradient blends ── */}

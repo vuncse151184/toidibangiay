@@ -1,14 +1,6 @@
 import type { Metadata } from "next"
 import ShopCatalogClient from "@/components/pages/ShopCatalogClient"
-import JsonLd from "@/components/seo/JsonLd"
-import {
-  buildLocaleAlternates,
-  buildProductListSchema,
-  getMetadataImages,
-  siteConfig,
-} from "@/lib/seo"
-import { getProductsPage } from "@/services/product.service"
-import type { PageInfo, Product } from "@/types/product"
+import { buildLocaleAlternates, getMetadataImages, siteConfig } from "@/lib/seo"
 
 export const revalidate = 3600
 
@@ -35,36 +27,6 @@ export const metadata: Metadata = {
   },
 }
 
-export default async function ShopPage() {
-  let initialProducts: Product[] = []
-  let initialPageInfo: PageInfo = {
-    hasNextPage: false,
-    hasPreviousPage: false,
-    endCursor: null,
-    startCursor: null,
-  }
-  let hasError = false
-
-  try {
-    const page = await getProductsPage()
-    initialProducts = page.products
-    initialPageInfo = page.pageInfo
-  } catch {
-    hasError = true
-  }
-
-  return (
-    <>
-      {initialProducts.length > 0 && (
-        <JsonLd
-          data={buildProductListSchema("Shop Something Store", "/shop", initialProducts)}
-        />
-      )}
-      <ShopCatalogClient
-        initialProducts={initialProducts}
-        initialPageInfo={initialPageInfo}
-        hasError={hasError}
-      />
-    </>
-  )
+export default function ShopPage() {
+  return <ShopCatalogClient />
 }

@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - { name: gateway, path: backend/apps/gateway }
+          - { name: auth-service, path: backend/services/auth-service }
+          - { name: user-service, path: backend/services/user-service }
+          - { name: product-service, path: backend/services/product-service }
+          - { name: cart-service, path: backend/services/cart-service }
+          - { name: order-service, path: backend/services/order-service }
+          - { name: inventory-service, path: backend/services/inventory-service }
+          - { name: payment-service, path: backend/services/payment-service }
+          - { name: notification-service, path: backend/services/notification-service }
+          - { name: search-service, path: backend/services/search-service }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.service.path }}/package.json
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.service.path }}
+        run: npm install --legacy-peer-deps
+
+      - name: Generate Prisma client
+        working-directory: ${{ matrix.service.path }}
+        run: |
+          if [ -f "prisma/schema.prisma" ]; then
+            npx prisma generate
+          fi
+
+      - name: Type check
+        working-directory: ${{ matrix.service.path }}
+        run: npx tsc --noEmit
+
+  frontend-typecheck:
+    name: Frontend Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: shopify-store/package.json
+
+      - name: Install dependencies
+        working-directory: shopify-store
+        run: npm install --legacy-peer-deps
+
+      - name: Type check
+        working-directory: shopify-store
+        run: npx tsc --noEmit

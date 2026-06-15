@@ -715,40 +715,47 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
 ## Checklist Phase 3
 
-### Search (Elasticsearch)
-- [ ] Index mapping tạo đúng với Vietnamese analyzer
-- [ ] Full-text search tìm được sản phẩm với từ có dấu (ví dụ: "giày chạy bộ")
-- [ ] Fuzzy search bắt được typo (ví dụ: "Adidass" → Adidas)
-- [ ] Filter theo category, brand, price range, size, color
-- [ ] Aggregations trả về facets đúng
-- [ ] Autocomplete (type-ahead) trong search bar
-- [ ] Product events được sync vào Elasticsearch khi create/update/delete
-- [ ] Search response < 100ms (95th percentile)
+### Search (OpenSearch / Elasticsearch)
+- [x] Index mapping tạo đúng — `INDEX_MAPPING` trong `search.service.ts`: keyword/text/float/integer/date đúng type; `brand` multi-field `.keyword` cho aggregation; `ensureIndex()` tự tạo nếu chưa có
+- [x] Full-text search hoạt động — `multi_match` query trên `name^4`, `name.autocomplete^2`, `brand^2`, `description`, `tags`; frontend `ShopCatalogClient` fetch `/api/search` → search-service
+- [x] Fuzzy search bắt được typo — `fuzziness: "AUTO"`, `prefix_length: 1` trong multi_match query
+- [x] Filter theo category, brand, price range, size, color — `term/terms/range` filter đầy đủ trong `search.service.ts`
+- [x] Aggregations trả về facets đúng — `brands` dùng `brand.keyword`, `sizes`/`colors`/`categories` dùng keyword field; bug `illegal_argument_exception` đã fix
+- [x] Autocomplete (type-ahead) trong search bar — `SearchOverlay` gọi `/api/search/suggest?q=...` (debounce 150ms), hiển thị chips phía trên kết quả; click chip → điền query + trigger full search
+- [x] Product events sync vào OpenSearch khi create/update/delete — `SearchConsumerModule` đã mount vào `app.module.ts`; `connectionInitOptions: { wait: false }` đảm bảo HTTP routes không bị block nếu RabbitMQ chưa sẵn sàng
+- [ ] Search response < 100ms (95th percentile) — cần đo thực tế trên AWS OpenSearch
 
 ### Frontend Performance
 - [x] Skeleton loading trên tất cả trang có data fetch — `TableSkeleton` trong admin/products, loading state trong hero, products pages
-- [x] Infinite scroll hoạt động — `useInfiniteShowMore` hook dùng IntersectionObserver
-- [ ] Optimistic update cho add-to-cart (không chờ server)
-- [ ] Cart count update ngay khi thêm (không blink)
-- [x] Images lazy loaded, WebP format — Next.js `<Image>` component dùng xuyên suốt
-- [ ] Lighthouse Performance score > 85 trên mobile
-- [ ] Core Web Vitals: LCP < 2.5s, CLS < 0.1, FID < 100ms
+- [x] Infinite scroll hoạt động — `useInfiniteShowMore` hook dùng IntersectionObserver; `InfiniteProductGrid` dùng CSS `fade-in-up` thay framer-motion per-card (fix scroll lag)
+- [x] Smooth scroll — `ReactLenis` từ `lenis/react` với `lerp: 0.08`; fix RAF leak của implementation cũ
+- [x] Optimistic update cho add-to-cart — `cart.store.ts` `addItem()` nhận `optimistic` param, update Zustand ngay trước khi server trả về
+- [x] Cart count update ngay khi thêm — `AddToCartButton` truyền `optimistic` data, store update đồng bộ
+- [x] Images lazy loaded, WebP format — Next.js `<Image>` dùng xuyên suốt; `sizes` prop thêm cho hero shoe + thumbnails; `priority`/`loading="eager"` cho LCP card đầu tiên
+- [x] INP search bar cải thiện — `startTransition` cho `setResults`; bỏ `height: "auto"` framer-motion (layout reflow per keystroke); CSS opacity transition
+- [ ] Lighthouse Performance score > 85 trên mobile — cần đo thực tế
+- [ ] Core Web Vitals: LCP < 2.5s, CLS < 0.1, INP < 200ms — cần đo thực tế
 
 ### PWA
 - [x] Manifest.json đúng (icon, name, display: standalone) — `public/manifest.json` đầy đủ với shortcuts
 - [x] Service worker registered — `ServiceWorkerRegister.tsx` đăng ký `/sw.js`
-- [ ] Product images cached (CacheFirst strategy) — sw.js chưa có runtime caching config
-- [ ] API responses cached ngắn hạn (NetworkFirst) — chưa có
-- [ ] Install prompt hoạt động trên Android Chrome
+- [x] Product images cached (CacheFirst strategy) — `sw.js` cache Cloudinary + Nike static images
+- [x] API responses cached ngắn hạn (NetworkFirst) — `sw.js` NetworkFirst cho `/api/products`, `/api/collections`
+- [x] Install prompt hoạt động trên Android Chrome — `PwaInstallPrompt.tsx` lắng nghe `beforeinstallprompt`, bottom sheet với nút Cài đặt / Để sau
 
 ### Admin Dashboard
-- [~] CRUD sản phẩm từ admin panel — có list/search/hide/show; **chưa có form tạo mới / chỉnh sửa sản phẩm**
-- [ ] Upload ảnh với drag & drop
+- [x] CRUD sản phẩm từ admin panel — list/search/hide/show + form tạo mới (`/admin/products/new`) + form chỉnh sửa (`/admin/products/[id]/edit`) + backend `PATCH /products/:id` + `GET /products/by-id/:id`
+- [x] Upload ảnh — lazy upload + drag &amp; drop vào `ImageMultiUpload` (kéo thả với visual feedback, filter image-only files)
 - [x] Quản lý order với cập nhật trạng thái — `/admin/orders` + `/admin/orders/[id]` với filter theo status
 - [x] Xem và nhập tồn kho — `/admin/inventory` với RestockModal gọi `/inventory/restock`
-- [ ] Export orders CSV
-- [x] Admin routes bảo vệ đúng (redirect nếu không phải ADMIN) — layout kiểm tra `roles.includes("admin")`
+- [x] Export orders CSV — `exportCSV()` trong `/admin/orders`, UTF-8 BOM, download file `orders-YYYY-MM-DD.csv`
+- [x] Admin routes bảo vệ đúng — layout guard + `/admin/login` page riêng; redirect non-admin về `/admin/login`
 - [x] **[BONUS]** Quản lý Hero Banner — `/admin/hero` CRUD đầy đủ typography, slides, CTA, isActive
+- [x] **[BONUS]** Admin login page riêng — `/admin/login` tách khỏi consumer login, kiểm tra role sau đăng nhập
+- [x] **[BONUS]** Clone variant — nút nhân bản trên mỗi variant row (cả `/admin/products/new` và `edit`)
+- [x] **[BONUS]** PriceInput định dạng VND real-time, shadcn Select + Sonner toast với progress upload
+- [x] **[BONUS]** AdminSidebar tách component riêng, sticky layout (`sticky top-0 h-screen`)
+- [x] **[BONUS]** Nike product seed — 10 sản phẩm, ~120 variants, idempotent upsert (`seed:nike`)
 
 ### SEO
 - [x] Mỗi trang sản phẩm có unique title + meta description — `generateMetadata()` trong `/products/[slug]/page.tsx`

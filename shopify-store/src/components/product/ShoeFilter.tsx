@@ -12,7 +12,7 @@ export interface ShoeFilters {
 }
 
 const defaultFilters: ShoeFilters = {
-  priceRange: [0, 500],
+  priceRange: [0, 5000000],
   sizes: [],
   availability: "all",
   sortBy: "default",
@@ -81,7 +81,7 @@ export default function ShoeFilter({ filters, onChange, totalResults }: Props) {
     filters.sizes.length > 0,
     filters.availability !== "all",
     filters.sortBy !== "default",
-    filters.priceRange[0] > 0 || filters.priceRange[1] < 500,
+    filters.priceRange[0] > 0 || filters.priceRange[1] < 5000000,
   ].filter(Boolean).length
 
   const updateFilter = <K extends keyof ShoeFilters>(key: K, value: ShoeFilters[K]) => {
@@ -242,7 +242,7 @@ export default function ShoeFilter({ filters, onChange, totalResults }: Props) {
               </button>
             </span>
           )}
-          {(filters.priceRange[0] > 0 || filters.priceRange[1] < 500) && (
+          {(filters.priceRange[0] > 0 || filters.priceRange[1] < 5000000) && (
             <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-600/10 border border-red-500/20 text-[10px] text-red-400">
               ${filters.priceRange[0]}–${filters.priceRange[1]}
               <button onClick={() => updateFilter("priceRange", [0, 500])} className="hover:text-white ml-0.5">

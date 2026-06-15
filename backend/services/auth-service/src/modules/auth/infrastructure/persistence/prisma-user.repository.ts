@@ -14,6 +14,14 @@ export class PrismaUserRepository implements UserRepositoryPort {
     return count > 0;
   }
 
+  async findUserIdByEmail(emailNormalized: string): Promise<string | null> {
+    const identity = await this.prisma.authIdentity.findUnique({
+      where: { emailNormalized },
+      select: { userId: true },
+    });
+    return identity?.userId ?? null;
+  }
+
   async createUser(input: { fullName: string }): Promise<{ userId: string }> {
     const user = await this.prisma.authUser.create({
       data: { fullName: input.fullName },

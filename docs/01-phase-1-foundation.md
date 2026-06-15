@@ -564,7 +564,7 @@ async uploadProductImage(file: Express.Multer.File, productId: string) {
 
 ```bash
 DATABASE_URL=postgresql://postgres:postgres@localhost:5433/product_db
-AWS_REGION=ap-southeast-1
+AWS_REGION=us-east-2
 AWS_S3_BUCKET=toidibangiay-media-dev
 CDN_URL=https://cdn.toidibangiay.vn
 RABBITMQ_URL=amqp://admin:admin@localhost:5672

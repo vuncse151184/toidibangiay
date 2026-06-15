@@ -66,6 +66,277 @@ Kết thúc Phase 4:
 
 ---
 
+## Setup Guide: Triển Khai Từ Đầu
+
+> Hướng dẫn này đi từng bước để đưa project lên AWS EKS lần đầu. Thực hiện theo thứ tự — mỗi bước phụ thuộc vào bước trước.
+
+### Yêu Cầu
+
+```bash
+# Cài đặt các công cụ cần thiết
+aws --version          # >= 2.x
+kubectl version        # >= 1.28
+eksctl version         # >= 0.180
+helm version           # >= 3.x
+```
+
+Tài khoản AWS cần có quyền: `AmazonEC2FullAccess`, `AmazonEKSFullAccess`, `AmazonECRFullAccess`, `IAMFullAccess`, `SecretsManagerFullAccess`.
+
+---
+
+### Bước 1: Tạo ECR Repositories
+
+Chạy script sau một lần để tạo 10 repositories:
+
+```bash
+REGION=us-east-2
+SERVICES=(gateway auth-service user-service product-service cart-service \
+          order-service inventory-service payment-service notification-service search-service)
+
+for svc in "${SERVICES[@]}"; do
+  aws ecr create-repository \
+    --repository-name "$svc" \
+    --region "$REGION" \
+    --image-scanning-configuration scanOnPush=true \
+    2>/dev/null && echo "Created: $svc" || echo "Already exists: $svc"
+done
+
+# Lấy ACCOUNT_ID để dùng ở các bước sau
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+echo "Account ID: $ACCOUNT_ID"
+echo "ECR prefix: $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com"
+```
+
+Sau đó cập nhật `ACCOUNT_ID` trong tất cả `k8s/apps/*/kustomization.yaml`:
+
+```bash
+find k8s/apps -name "kustomization.yaml" | xargs \
+  sed -i "s|ACCOUNT_ID|$ACCOUNT_ID|g"
+```
+
+---
+
+### Bước 2: Tạo EKS Cluster
+
+```bash
+# Tạo cluster (~15 phút)
+eksctl create cluster \
+  --name toidibangiay \
+  --region us-east-2 \
+  --nodegroup-name standard \
+  --node-type t3.medium \
+  --nodes 2 \
+  --nodes-min 2 \
+  --nodes-max 6 \
+  --managed
+
+# Verify
+kubectl get nodes
+```
+
+Cấu hình kubeconfig:
+
+```bash
+aws eks update-kubeconfig \
+  --name toidibangiay \
+  --region us-east-2
+```
+
+---
+
+### Bước 3: Apply Namespaces và Ingress Controller
+
+```bash
+# Tạo namespaces
+kubectl apply -f k8s/namespace.yaml
+
+# Cài AWS Load Balancer Controller (cần cho ALB Ingress)
+helm repo add eks https://aws.github.io/eks-charts
+helm repo update
+
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  -n kube-system \
+  --set clusterName=toidibangiay \
+  --set serviceAccount.create=true \
+  --set region=us-east-2
+```
+
+Lấy Certificate ARN từ ACM rồi cập nhật `k8s/ingress/ingress.yaml`:
+
+```bash
+# Lấy ARN của certificate đã tạo cho domain
+aws acm list-certificates --region us-east-2
+
+# Sửa file ingress
+sed -i "s|\$CERTIFICATE_ARN|arn:aws:acm:...|g" k8s/ingress/ingress.yaml
+kubectl apply -f k8s/ingress/ingress.yaml
+```
+
+---
+
+### Bước 4: Cài External Secrets Operator
+
+External Secrets đồng bộ secrets từ AWS Secrets Manager vào K8s:
+
+```bash
+helm repo add external-secrets https://charts.external-secrets.io
+helm install external-secrets external-secrets/external-secrets \
+  -n kube-system \
+  --set installCRDs=true
+```
+
+Tạo IAM policy cho External Secrets đọc Secrets Manager:
+
+```bash
+aws iam create-policy \
+  --policy-name ExternalSecretsPolicy \
+  --policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow",
+      "Action": ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"],
+      "Resource": "arn:aws:secretsmanager:us-east-2:*:secret:/toidibangiay/*"
+    }]
+  }'
+```
+
+Tạo ClusterSecretStore:
+
+```bash
+cat <<EOF | kubectl apply -f -
+apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: aws-secrets-manager
+spec:
+  provider:
+    aws:
+      service: SecretsManager
+      region: us-east-2
+      auth:
+        jwt:
+          serviceAccountRef:
+            name: external-secrets
+            namespace: kube-system
+EOF
+```
+
+Tạo secrets trên AWS Secrets Manager (ví dụ auth-service):
+
+```bash
+aws secretsmanager create-secret \
+  --name /toidibangiay/prod/auth-service \
+  --region us-east-2 \
+  --secret-string '{
+    "DATABASE_URL": "postgresql://user:pass@rds-host:5432/ecommerce",
+    "REDIS_URL": "redis://elasticache-host:6379",
+    "JWT_ACCESS_SECRET": "your-secret-min-32-chars",
+    "SMTP_USER": "your@gmail.com",
+    "SMTP_PASS": "your-app-password"
+  }'
+
+# Lặp tương tự cho: user-service, product-service, cart-service,
+# order-service, inventory-service, payment-service, notification-service,
+# search-service, gateway
+```
+
+---
+
+### Bước 5: Cài ArgoCD
+
+```bash
+kubectl create namespace argocd
+kubectl apply -n argocd \
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# Đợi ArgoCD khởi động
+kubectl wait --for=condition=available deployment/argocd-server \
+  -n argocd --timeout=120s
+
+# Port-forward để truy cập UI
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+
+# Lấy mật khẩu admin
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath="{.data.password}" | base64 -d; echo
+```
+
+Truy cập `https://localhost:8080`, đăng nhập `admin` / password vừa lấy.
+
+---
+
+### Bước 6: Tạo GitOps Repository
+
+ArgoCD theo dõi một repo riêng chứa K8s manifests. Tạo repo `toidibangiay-gitops` trên GitHub rồi copy thư mục `k8s/` vào:
+
+```bash
+# Trong repo toidibangiay-gitops (repo mới)
+cp -r k8s/ .
+git add . && git commit -m "init: k8s manifests"
+git push
+```
+
+Đăng ký repo với ArgoCD:
+
+```bash
+argocd repo add https://github.com/YOUR_ORG/toidibangiay-gitops \
+  --username YOUR_GITHUB_USER \
+  --password YOUR_GITHUB_PAT
+```
+
+Tạo ArgoCD Application:
+
+```bash
+argocd app create toidibangiay \
+  --repo https://github.com/YOUR_ORG/toidibangiay-gitops \
+  --path k8s/apps \
+  --dest-server https://kubernetes.default.svc \
+  --dest-namespace toidibangiay-prod \
+  --sync-policy automated \
+  --auto-prune \
+  --self-heal
+```
+
+---
+
+### Bước 7: GitHub Secrets
+
+Trong GitHub repo → **Settings → Secrets → Actions**, thêm:
+
+| Secret | Cách lấy |
+|--------|---------|
+| `AWS_ACCOUNT_ID` | `aws sts get-caller-identity --query Account --output text` |
+| `AWS_ACCESS_KEY_ID` | IAM user → Security credentials |
+| `AWS_SECRET_ACCESS_KEY` | IAM user → Security credentials |
+| `GITOPS_TOKEN` | GitHub → Settings → Developer settings → PAT (repo scope) |
+
+---
+
+### Bước 8: First Deploy
+
+Push một commit vào `main` để trigger pipeline:
+
+```bash
+git add .
+git commit -m "ci: trigger first deploy"
+git push origin main
+```
+
+Theo dõi pipeline trên GitHub Actions. Sau khi xong, ArgoCD tự sync. Kiểm tra:
+
+```bash
+# Xem tất cả pods
+kubectl get pods -n toidibangiay-prod
+
+# Xem logs một service
+kubectl logs -n toidibangiay-prod deployment/gateway -f
+
+# Xem ArgoCD sync status
+argocd app get toidibangiay
+```
+
+---
+
 ## Tuần 13: Kubernetes Setup trên EKS
 
 ### Kubernetes Resource Overview
@@ -116,7 +387,7 @@ spec:
       serviceAccountName: auth-service-sa
       containers:
         - name: auth-service
-          image: 123456789.dkr.ecr.ap-southeast-1.amazonaws.com/auth-service:latest
+          image: 123456789.dkr.ecr.us-east-2.amazonaws.com/auth-service:latest
           ports:
             - containerPort: 3001
           env:
@@ -225,10 +496,10 @@ metadata:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-southeast-1:xxx:certificate/xxx
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-2:xxx:certificate/xxx
     alb.ingress.kubernetes.io/ssl-redirect: "443"
     alb.ingress.kubernetes.io/healthcheck-path: /health
-    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:ap-southeast-1:xxx:regional/webacl/xxx
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:us-east-2:xxx:regional/webacl/xxx
 spec:
   rules:
     - host: api.toidibangiay.vn
@@ -302,8 +573,8 @@ on:
     branches: [main]
 
 env:
-  AWS_REGION: ap-southeast-1
-  ECR_REGISTRY: 123456789.dkr.ecr.ap-southeast-1.amazonaws.com
+  AWS_REGION: us-east-2
+  ECR_REGISTRY: 123456789.dkr.ecr.us-east-2.amazonaws.com
 
 jobs:
   test:

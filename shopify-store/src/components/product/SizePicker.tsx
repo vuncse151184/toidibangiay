@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import { motion } from "framer-motion"
+import SizeGuideModal from "./SizeGuideModal"
 
 const SHOE_SIZES = [36, 37, 38, 39, 40, 41, 42, 43, 44, 45]
 
@@ -11,6 +13,8 @@ type Props = {
 }
 
 export default function SizePicker({ selected, onSelect, soldOutSizes = [] }: Props) {
+  const [isGuideOpen, setIsGuideOpen] = useState(false)
+
   return (
     <div className="mt-8">
       <div className="flex items-center justify-between mb-4">
@@ -55,10 +59,19 @@ export default function SizePicker({ selected, onSelect, soldOutSizes = [] }: Pr
         })}
       </div>
 
-      {/* Size guide link */}
-      <button className="mt-3 text-[11px] text-red-500/70 hover:text-red-400 transition-colors tracking-wider uppercase underline underline-offset-2">
+      {/* Size guide trigger */}
+      <button
+        onClick={() => setIsGuideOpen(true)}
+        className="mt-3 text-[11px] text-red-500/70 hover:text-red-400 transition-colors tracking-wider uppercase underline underline-offset-2"
+      >
         Hướng dẫn chọn size
       </button>
+
+      <SizeGuideModal
+        isOpen={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
+        selectedSize={selected}
+      />
     </div>
   )
 }

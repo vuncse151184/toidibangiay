@@ -6,13 +6,14 @@ import type { Product } from "@/types/product"
 
 type Props = {
   product: Product
+  priority?: boolean
 }
 
 function formatVND(amount: number) {
   return new Intl.NumberFormat('vi-VN').format(amount) + '₫'
 }
 
-export default function ProductCard({ product }: Props) {
+export default function ProductCard({ product, priority = false }: Props) {
   const firstImage = product.images[0]?.url
   const firstVariant = product.variants[0]
   const price = firstVariant ? parseFloat(firstVariant.price.amount) : 0
@@ -59,7 +60,8 @@ export default function ProductCard({ product }: Props) {
                 alt={product.title}
                 fill
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                loading="lazy"
+                priority={priority}
+                loading={priority ? "eager" : "lazy"}
                 className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-105"
               />
             ) : (

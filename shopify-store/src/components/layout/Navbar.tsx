@@ -144,20 +144,22 @@ export default function Navbar() {
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.7, ease: "easeOut" }}
-        className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${
-          scrolled
+        className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${scrolled
             ? "bg-black/80 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
             : "bg-transparent"
-        }`}
+          }`}
       >
         <div className="max-w-[1400px] mx-auto px-6 md:px-8 h-20 flex items-center justify-between text-white">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
             <Image
-              src="/images/logo1.png"
-              alt="Jumpman"
-              width={200}
-              height={200}
+             
+           src="https://res.cloudinary.com/dtmy1ys91/image/upload/v1781488046/logo1_zvbvi7.png"
+              alt="Toidibangiay"
+              width={120}
+              height={40}
+              priority
+              className="h-10 w-auto object-contain"
             />
           </Link>
 
@@ -169,9 +171,8 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative py-1 transition-colors duration-300 ${
-                    isActive ? "text-red-500" : "text-white/70 hover:text-white"
-                  }`}
+                  className={`relative py-1 transition-colors duration-300 ${isActive ? "text-red-500" : "text-white/70 hover:text-white"
+                    }`}
                 >
                   {link.label}
                   {isActive && (
@@ -243,11 +244,10 @@ export default function Navbar() {
                       key={link.href}
                       href={link.href}
                       onClick={() => setMobileOpen(false)}
-                      className={`block py-3 text-sm font-semibold tracking-[0.2em] uppercase transition-colors ${
-                        isActive
+                      className={`block py-3 text-sm font-semibold tracking-[0.2em] uppercase transition-colors ${isActive
                           ? "text-red-500 border-l-2 border-red-500 pl-4"
                           : "text-white/60 hover:text-white pl-4"
-                      }`}
+                        }`}
                     >
                       {link.label}
                     </Link>

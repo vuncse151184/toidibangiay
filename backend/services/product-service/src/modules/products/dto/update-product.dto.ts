@@ -1,6 +1,7 @@
 import { Type } from "class-transformer";
 import {
   IsArray,
+  IsBoolean,
   IsInt,
   IsNumber,
   IsOptional,
@@ -11,26 +12,44 @@ import {
 } from "class-validator";
 
 class UpdateProductVariantDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @IsString()
   sku!: string;
 
+  @IsOptional()
   @IsString()
-  color!: string;
+  color?: string;
 
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  size!: number;
+  @IsOptional()
+  @IsString()
+  size?: string;
 
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   price!: number;
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  compareAtPrice?: number;
+
   @Type(() => Number)
   @IsInt()
   @Min(0)
   stock!: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @IsOptional()
+  @IsString()
+  image?: string;
 }
 
 class UpdateProductImageDto {
@@ -39,7 +58,7 @@ class UpdateProductImageDto {
 
   @IsOptional()
   @IsString()
-  alt?: string;
+  altText?: string;
 
   @IsOptional()
   @Type(() => Number)
@@ -64,6 +83,10 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   categoryId?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 
   @IsOptional()
   @IsArray()

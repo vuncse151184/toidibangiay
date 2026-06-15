@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { buildOrganizationSchema, defaultMetadata } from "@/lib/seo"
 import { Providers } from "./providers"
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister"
+import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt"
 import { Toaster } from "@/components/ui/sonner"
 
 export const metadata: Metadata = {
@@ -34,6 +35,7 @@ export default function RootLayout({
     <html lang="vi" className={cn("font-sans", geist.variable, oswald.variable)}>
       <body className="bg-black text-white antialiased">
         <ServiceWorkerRegister />
+        <PwaInstallPrompt />
         <JsonLd data={buildOrganizationSchema()} />
         <Providers>{children}</Providers>
         <Toaster richColors position="top-right" />

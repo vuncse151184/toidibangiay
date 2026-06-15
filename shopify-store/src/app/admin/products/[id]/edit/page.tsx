@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react"
+import { ArrowLeft, Plus, Trash2, Loader2, Copy } from "lucide-react"
 import { toast } from "sonner"
 import ImageMultiUpload from "@/components/ui/ImageMultiUpload"
 import PriceInput from "@/components/ui/PriceInput"
@@ -95,7 +95,7 @@ export default function AdminProductEditPage({ params }: { params: Promise<{ id:
   }, [accessToken])
 
   useEffect(() => {
-    backendClientFetch<AdminProduct>(`/products/${id}`, { accessToken })
+    backendClientFetch<AdminProduct>(`/products/by-id/${id}`, { accessToken })
       .then((p) => {
         setName(p.name)
         setBrand(p.brand ?? "")
@@ -301,15 +301,38 @@ export default function AdminProductEditPage({ params }: { params: Promise<{ id:
                     Biến thể {i + 1}
                     {v.id && <span className="ml-2 font-mono text-white/20">{v.id.slice(0, 8)}</span>}
                   </span>
-                  {variants.length > 1 && (
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setVariants((p) => p.filter((r) => r.tempId !== v.tempId))}
-                      className="text-white/20 hover:text-red-400 transition-colors"
+                      title="Nhân bản"
+                      onClick={() =>
+                        setVariants((p) => {
+                          const idx = p.findIndex((r) => r.tempId === v.tempId)
+                          const copy: VariantRow = {
+                            ...v,
+                            tempId: Math.random().toString(36).slice(2),
+                            id: undefined,
+                            sku: "",
+                          }
+                          const next = [...p]
+                          next.splice(idx + 1, 0, copy)
+                          return next
+                        })
+                      }
+                      className="text-white/20 hover:text-blue-400 transition-colors"
                     >
-                      <Trash2 size={14} />
+                      <Copy size={14} />
                     </button>
-                  )}
+                    {variants.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setVariants((p) => p.filter((r) => r.tempId !== v.tempId))}
+                        className="text-white/20 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

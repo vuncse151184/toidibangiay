@@ -14,6 +14,12 @@ const schema = z.object({
   VNPAY_TMN_CODE: z.string().optional(),
   VNPAY_HASH_SECRET: z.string().optional(),
   VNPAY_URL: z.string().default('https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
+  PAYOS_CLIENT_ID: z.string().optional(),
+  PAYOS_API_KEY: z.string().optional(),
+  PAYOS_CHECKSUM_KEY: z.string().optional(),
+  PAYOS_API_URL: z.string().default('https://api-merchant.payos.vn'),
+  PAYOS_RETURN_URL: z.string().default('http://localhost:3000/checkout/success'),
+  PAYOS_CANCEL_URL: z.string().default('http://localhost:3000/checkout/cancel'),
 });
 
 const parsed = schema.parse(process.env);
@@ -32,4 +38,10 @@ export const env = {
   VNPAY_TMN_CODE: parsed.VNPAY_TMN_CODE,
   VNPAY_HASH_SECRET: parsed.VNPAY_HASH_SECRET,
   VNPAY_URL: parsed.VNPAY_URL.replace(/\/$/, ''),
+  PAYOS_CLIENT_ID: parsed.PAYOS_CLIENT_ID,
+  PAYOS_API_KEY: parsed.PAYOS_API_KEY,
+  PAYOS_CHECKSUM_KEY: parsed.PAYOS_CHECKSUM_KEY,
+  PAYOS_API_URL: parsed.PAYOS_API_URL.replace(/\/$/, ''),
+  PAYOS_RETURN_URL: parsed.PAYOS_RETURN_URL.replace(/\/$/, ''),
+  PAYOS_CANCEL_URL: parsed.PAYOS_CANCEL_URL.replace(/\/$/, ''),
 };

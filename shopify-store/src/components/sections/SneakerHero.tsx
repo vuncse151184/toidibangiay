@@ -269,6 +269,7 @@ export default function SneakerHero() {
                       src={variant.src}
                       alt={variant.label}
                       fill
+                      sizes="48px"
                       className="object-cover"
                     />
                   </motion.button>

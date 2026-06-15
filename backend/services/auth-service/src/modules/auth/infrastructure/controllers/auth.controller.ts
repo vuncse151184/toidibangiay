@@ -26,6 +26,7 @@ import { LoginDto } from '../../application/dto/login.dto';
 import { RefreshTokenDto } from '../../application/dto/refresh-token.dto';
 import { RegisterDto } from '../../application/dto/register.dto';
 import { ResetPasswordDto } from '../../application/dto/reset-password.dto';
+import { SocialLoginDto } from '../../application/dto/social-login.dto';
 import { VerifyEmailDto } from '../../application/dto/verify-email.dto';
 import { ForgotPasswordUseCase } from '../../application/use-cases/forgot-password.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
@@ -33,6 +34,7 @@ import { LogoutUseCase } from '../../application/use-cases/logout.use-case';
 import { RefreshSessionUseCase } from '../../application/use-cases/refresh-session.use-case';
 import { RegisterUseCase } from '../../application/use-cases/register.use-case';
 import { ResetPasswordUseCase } from '../../application/use-cases/reset-password.use-case';
+import { SocialLoginUseCase } from '../../application/use-cases/social-login.use-case';
 import { VerifyEmailUseCase } from '../../application/use-cases/verify-email.use-case';
 
 @ApiTags('auth')
@@ -46,6 +48,7 @@ export class AuthController {
     private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
     private readonly resetPasswordUseCase: ResetPasswordUseCase,
     private readonly verifyEmailUseCase: VerifyEmailUseCase,
+    private readonly socialLoginUseCase: SocialLoginUseCase,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
   ) {}
@@ -96,6 +99,20 @@ export class AuthController {
     await this.logoutUseCase.execute(rawToken);
     clearRefreshCookie(res);
     return { message: 'Logged out successfully' };
+  }
+
+  @Post('social-login')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Đăng nhập bằng Google hoặc Facebook OAuth2' })
+  async socialLogin(
+    @Body() dto: SocialLoginDto,
+    @Ip() ipAddress: string,
+    @Headers('user-agent') userAgent: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.socialLoginUseCase.execute(dto, { ipAddress, userAgent });
+    setRefreshCookie(res, result.refreshToken);
+    return { accessToken: result.accessToken, expiresIn: result.expiresIn, user: result.user };
   }
 
   @Post('forgot-password')

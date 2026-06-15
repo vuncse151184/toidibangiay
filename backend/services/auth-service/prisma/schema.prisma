@@ -23,10 +23,11 @@ model AuthUser {
   createdAt    DateTime                 @default(now())
   updatedAt    DateTime                 @updatedAt
 
-  identity     AuthIdentity?
-  sessions     AuthSession[]
-  resetTokens  PasswordResetToken[]
-  verifyTokens EmailVerificationToken[]
+  identity         AuthIdentity?
+  sessions         AuthSession[]
+  resetTokens      PasswordResetToken[]
+  verifyTokens     EmailVerificationToken[]
+  socialIdentities SocialIdentity[]
 
   @@map("auth_users")
 }
@@ -99,6 +100,23 @@ model EmailVerificationToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("email_verification_tokens")
+}
+
+model SocialIdentity {
+  id          String   @id @default(cuid())
+  userId      String
+  provider    String
+  providerId  String
+  email       String?
+  displayName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+  @@map("social_identities")
 }
 
 model AuditLoginLog {

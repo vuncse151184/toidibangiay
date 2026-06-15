@@ -18,6 +18,7 @@ export type AuthState = {
   init: () => void
   login: (input: { email: string; password: string }) => Promise<void>
   register: (input: { fullName: string; email: string; password: string }) => Promise<void>
+  socialLogin: (input: { provider: "google" | "facebook"; token: string }) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -138,6 +139,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       method: "POST",
       body: JSON.stringify(input),
     })
+  },
+
+  socialLogin: async (input) => {
+    const result = await backendClientFetch<{
+      accessToken: string
+      user: AuthUser
+    }>("/auth/social-login", {
+      method: "POST",
+      body: JSON.stringify(input),
+    })
+
+    get().setSession(result)
+
+    try {
+      const profile = await backendClientFetch<AuthUser>("/auth/me", {
+        accessToken: result.accessToken,
+      })
+      const enriched = { ...result.user, fullName: profile.fullName }
+      localStorage.setItem(USER_KEY, JSON.stringify(enriched))
+      set({ user: enriched })
+    } catch {
+      // non-fatal
+    }
+
+    try {
+      const { useCartStore } = await import("@/store/cart.store")
+      await useCartStore.getState().mergeCart(result.accessToken)
+      clearSessionId()
+    } catch {
+      // non-fatal
+    }
   },
 
   logout: async () => {

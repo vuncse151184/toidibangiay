@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react"
+import { ArrowLeft, Plus, Trash2, Loader2, Copy } from "lucide-react"
 import { toast } from "sonner"
 import ImageMultiUpload from "@/components/ui/ImageMultiUpload"
 import PriceInput from "@/components/ui/PriceInput"
@@ -227,15 +227,37 @@ export default function AdminProductNewPage() {
               <div key={v.tempId} className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-white/40">Biến thể {i + 1}</span>
-                  {variants.length > 1 && (
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setVariants((p) => p.filter((r) => r.tempId !== v.tempId))}
-                      className="text-white/20 hover:text-red-400 transition-colors"
+                      title="Nhân bản"
+                      onClick={() =>
+                        setVariants((p) => {
+                          const idx = p.findIndex((r) => r.tempId === v.tempId)
+                          const copy: VariantRow = {
+                            ...v,
+                            tempId: Math.random().toString(36).slice(2),
+                            sku: "",
+                          }
+                          const next = [...p]
+                          next.splice(idx + 1, 0, copy)
+                          return next
+                        })
+                      }
+                      className="text-white/20 hover:text-blue-400 transition-colors"
                     >
-                      <Trash2 size={14} />
+                      <Copy size={14} />
                     </button>
-                  )}
+                    {variants.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setVariants((p) => p.filter((r) => r.tempId !== v.tempId))}
+                        className="text-white/20 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
