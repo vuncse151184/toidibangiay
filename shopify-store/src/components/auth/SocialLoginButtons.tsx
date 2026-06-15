@@ -71,16 +71,30 @@ export default function SocialLoginButtons({ redirectTo = "/" }: Props) {
 
   // Load Facebook SDK only on HTTPS (FB.login is blocked on HTTP)
   useEffect(() => {
-    if (!FB_APP_ID || !isHttps || fbInited.current) return
-    window.fbAsyncInit = () => {
+    if (!FB_APP_ID || !isHttps) return
+
+    const initFB = () => {
       window.FB.init({ appId: FB_APP_ID, version: "v20.0", cookie: true, xfbml: false })
       fbInited.current = true
     }
-    const script = document.createElement("script")
-    script.src = "https://connect.facebook.net/vi_VN/sdk.js"
-    script.async = true
-    script.defer = true
-    document.body.appendChild(script)
+
+    // SDK already loaded (cached or previous component mount)
+    if (window.FB) {
+      initFB()
+      return
+    }
+
+    window.fbAsyncInit = initFB
+
+    // Avoid injecting duplicate script tag
+    if (!document.getElementById("facebook-jssdk")) {
+      const script = document.createElement("script")
+      script.id = "facebook-jssdk"
+      script.src = "https://connect.facebook.net/en_US/sdk.js"
+      script.async = true
+      script.defer = true
+      document.body.appendChild(script)
+    }
   }, [isHttps])
 
   const handleOAuth = useCallback(
@@ -119,8 +133,12 @@ export default function SocialLoginButtons({ redirectTo = "/" }: Props) {
   }
 
   const handleFacebookClick = () => {
-    if (!FB_APP_ID || !window.FB) {
+    if (!FB_APP_ID) {
       setError("Facebook chưa được cấu hình — thêm NEXT_PUBLIC_FACEBOOK_APP_ID vào .env")
+      return
+    }
+    if (!window.FB || !fbInited.current) {
+      setError("Facebook SDK chưa sẵn sàng — thử lại sau vài giây")
       return
     }
     setError("")
