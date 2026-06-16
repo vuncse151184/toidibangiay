@@ -40,6 +40,7 @@ model OrderItem {
   variantTitle String
   price        Int
   quantity     Int
+  imageUrl     String?
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 

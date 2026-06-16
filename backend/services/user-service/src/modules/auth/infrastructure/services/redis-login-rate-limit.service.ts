@@ -1,8 +1,8 @@
 import {
   ForbiddenException,
+  HttpException,
   Inject,
   Injectable,
-  TooManyRequestsException,
 } from '@nestjs/common';
 import Redis from 'ioredis';
 
@@ -34,7 +34,7 @@ export class RedisLoginRateLimitService implements LoginRateLimitServicePort {
       const ipFailures = Number((await this.redis.get(ipKey)) ?? 0);
 
       if (ipFailures >= this.ipMaxFails) {
-        throw new TooManyRequestsException('Too many requests');
+        throw new HttpException('Too many requests', 429);
       }
     }
   }

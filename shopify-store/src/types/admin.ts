@@ -15,6 +15,7 @@ export interface OrderItem {
   variantTitle: string
   price: number
   quantity: number
+  imageUrl?: string | null
 }
 
 export interface OrderEvent {

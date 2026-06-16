@@ -7,7 +7,7 @@ export interface AddItemInput {
   productId: string;
   variantId: string;
   productName: string;
-  variantLabel?: string;
+  variantLabel?: string | null;
   imageUrl?: string;
   unitPrice: string;
   quantity: number;

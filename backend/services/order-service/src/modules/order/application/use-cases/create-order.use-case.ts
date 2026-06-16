@@ -55,6 +55,7 @@ export class CreateOrderUseCase {
               variantTitle: item.variantLabel ?? item.variantTitle ?? '',
               price: Number(item.unitPrice ?? item.price ?? 0),
               quantity: item.quantity ?? 1,
+              imageUrl: item.imageUrl ?? null,
             })),
           },
           events: {

@@ -11,8 +11,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.use(cookieParser());
+  const allowedOrigins = [
+    env.FRONTEND_URL,
+    // 'https://toidibangiay.vercel.app',
+  ].filter(Boolean)
   app.enableCors({
-    origin: env.FRONTEND_URL,
+    origin: allowedOrigins,
     credentials: true,
   });
   app.setGlobalPrefix('api');
