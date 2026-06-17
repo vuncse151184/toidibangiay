@@ -13,7 +13,8 @@ async function bootstrap() {
   app.use(cookieParser());
   const allowedOrigins = [
     env.FRONTEND_URL,
-    // 'https://toidibangiay.vercel.app',
+    'https://toidibangiay.vercel.app',
+    'https://toidibangiay.shop',
   ].filter(Boolean)
   app.enableCors({
     origin: allowedOrigins,
