@@ -3,6 +3,13 @@ import { siteConfig } from "@/lib/seo"
 import { getCollections } from "@/services/collection.service"
 import { getProducts } from "@/services/product.service"
 
+// Render on-demand instead of at build time. This route makes the heaviest
+// backend calls in the app (all products + all collections), and the backend
+// isn't reliably reachable during the Vercel build — generating it statically
+// hangs past Next's 60s route-build limit and fails the deploy. Serving it
+// dynamically keeps deploys green and the sitemap fresh against the live backend.
+export const dynamic = "force-dynamic"
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = siteConfig.url
 

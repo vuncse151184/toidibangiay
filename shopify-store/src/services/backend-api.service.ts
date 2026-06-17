@@ -51,9 +51,17 @@ export function getBackendApiBaseUrl() {
   ).replace(/\/$/, "")
 }
 
+// Fail fast instead of hanging when the backend is slow or unreachable (e.g.
+// during a Vercel build when the EKS backend is behind a flaky tunnel). Without
+// this, fetch can hang past Next's 60s route-build limit and abort the deploy.
+const parsedTimeout = Number(process.env.BACKEND_API_TIMEOUT_MS)
+const BACKEND_API_TIMEOUT_MS =
+  Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : 10_000
+
 export async function backendFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${getBackendApiBaseUrl()}${path}`, {
     ...init,
+    signal: init?.signal ?? AbortSignal.timeout(BACKEND_API_TIMEOUT_MS),
     headers: {
       "Content-Type": "application/json",
       ...init?.headers,
