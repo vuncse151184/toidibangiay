@@ -13,6 +13,12 @@ import { Toaster } from "@/components/ui/sonner"
 export const metadata: Metadata = {
   ...defaultMetadata,
   manifest: "/manifest.json",
+  other: {
+    "geo.region": "VN-43",
+    "geo.placename": "Ba Ria - Vung Tau",
+    "ICBM": "10.3460, 107.0843",
+    "facebook-domain-verification": "3s56bk1mbmjr7aeo247lnr7p3sdw0s",
+  } as Metadata["other"],
 }
 
 const geist = Geist({
