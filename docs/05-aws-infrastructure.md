@@ -481,3 +481,194 @@ Private Subnets:
 ```
 
 Xem `04-phase-4-scale.md` cho Kubernetes manifests, HPA config, CI/CD pipeline, observability setup, và load testing.
+
+---
+
+# PHẦN C: EKS Production (Hiện Tại — Đã Deploy)
+
+> Account: `061083040425`, Region: `us-east-2`, Cluster: `toidibangiay`
+
+## Mô Hình AWS Services
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        AWS Cloud (us-east-2)                             │
+│                                                                           │
+│  ┌──────────────────┐   ┌───────────────────────────────────────────┐   │
+│  │       ECR        │   │        EKS Cluster: toidibangiay           │   │
+│  │  (10 repos)      │   │                                             │   │
+│  │                  │   │  ┌─────────────────────────────────────┐  │   │
+│  │  gateway         │   │  │  Node Group: toidibangiay-nodes      │  │   │
+│  │  auth-service    │──▶│  │  2x t3.medium (us-east-2a/2b)        │  │   │
+│  │  user-service    │   │  └─────────────────────────────────────┘  │   │
+│  │  product-service │   │                                             │   │
+│  │  cart-service    │   │  ┌───────────────────────────────────────┐ │   │
+│  │  order-service   │   │  │   Namespace: toidibangiay-prod         │ │   │
+│  │  inventory-svc   │   │  │                                         │ │   │
+│  │  payment-svc     │   │  │  gateway           :4000  (API GW)     │ │   │
+│  │  notification    │   │  │  auth-service      :3001               │ │   │
+│  │  search-service  │   │  │  user-service      :3002               │ │   │
+│  └──────────────────┘   │  │  product-service   :3003               │ │   │
+│                          │  │  cart-service      :3004               │ │   │
+│  ┌──────────────────┐   │  │  order-service     :3005               │ │   │
+│  │       IAM        │   │  │  inventory-service :3006               │ │   │
+│  │  (IRSA roles)    │   │  │  payment-service   :3007               │ │   │
+│  │                  │   │  │  notification-svc  :3008               │ │   │
+│  │  EKSNodeRole     │   │  │  search-service    :3009               │ │   │
+│  │  ALBCtrlRole     │   │  │                                         │ │   │
+│  │  EBSCSIRole      │   │  │  PostgreSQL  (bitnami/postgresql)      │ │   │
+│  └──────────────────┘   │  │  Redis       (bitnami/redis)           │ │   │
+│                          │  └───────────────────────────────────────┘ │   │
+│  ┌──────────────────┐   │                                             │   │
+│  │   EBS (gp2)      │──▶│  ┌──────────────┐  ┌──────────────────┐   │   │
+│  │  StorageClass    │   │  │  kube-system  │  │    argocd        │   │   │
+│  │  (default)       │   │  │              │  │                  │   │   │
+│  └──────────────────┘   │  │  aws-node    │  │  App:            │   │   │
+│                          │  │  kube-proxy  │  │  toidibangiay   │   │   │
+│  ┌──────────────────┐   │  │  coredns     │  │  Auto-sync ✓     │   │   │
+│  │   ALB (AWS)      │◀──│  │  aws-lb-ctrl │  └──────────────────┘   │   │
+│  └──────────────────┘   │  │  ebs-csi     │                         │   │
+│                          │  └──────────────┘                         │   │
+│                          └───────────────────────────────────────────┘   │
+│  VPC: vpc-05312a3039b858a9a                                               │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## CI/CD Pipeline
+
+```
+Developer
+    │
+    │  git push → main
+    ▼
+┌──────────────────────────────────────────────────┐
+│           GitHub: toidibangiay                    │
+│   .github/workflows/deploy.yml                   │
+│   Trigger: push to main                          │
+└────────────────┬─────────────────────────────────┘
+                 │
+                 ▼
+┌──────────────────────────────────────────────────┐
+│   Job 1: Build  (10 parallel matrix jobs)         │
+│   environment: AWS  ← GitHub Environment          │
+│                                                    │
+│   Per service:                                     │
+│   1. docker buildx build (multi-stage Dockerfile) │
+│      Stage 1: npm install + prisma generate + tsc │
+│      Stage 2: production image (node:20-alpine)   │
+│   2. Push to ECR:                                  │
+│      061083040425.dkr.ecr.us-east-2.amazonaws.com │
+│      Tags: {git-sha}  +  latest                  │
+└────────────────┬─────────────────────────────────┘
+                 │  needs: build
+                 ▼
+┌──────────────────────────────────────────────────┐
+│   Job 2: Update GitOps                            │
+│   environment: AWS  ← GitHub Environment          │
+│                                                    │
+│   1. Checkout toidibangiay-gitops (GITOPS_TOKEN)  │
+│   2. Update k8s/apps/{svc}/kustomization.yaml     │
+│      → newTag: {git-sha}                         │
+│   3. git commit + push                           │
+└────────────────┬─────────────────────────────────┘
+                 │
+                 ▼
+┌──────────────────────────────────────────────────┐
+│   GitHub: toidibangiay-gitops                     │
+│                                                    │
+│   k8s/                                            │
+│   ├── kustomization.yaml                          │
+│   ├── namespace.yaml                              │
+│   ├── apps/{service}/kustomization.yaml ◄ updated │
+│   └── ingress/ingress.yaml                       │
+└────────────────┬─────────────────────────────────┘
+                 │  ArgoCD polls mỗi 3 phút
+                 ▼
+┌──────────────────────────────────────────────────┐
+│   ArgoCD  (namespace: argocd)                     │
+│                                                    │
+│   App: toidibangiay                               │
+│   Source: toidibangiay-gitops  (path: k8s)        │
+│   Sync: Automatic + Self Heal + Prune             │
+│   → kubectl apply -k k8s/                        │
+│   → Rolling update deployments                   │
+└────────────────┬─────────────────────────────────┘
+                 │
+                 ▼
+┌──────────────────────────────────────────────────┐
+│   EKS: toidibangiay-prod                          │
+│   RollingUpdate: maxUnavailable=0, maxSurge=1     │
+│   Image pull từ ECR (tag: {git-sha})              │
+└──────────────────────────────────────────────────┘
+```
+
+---
+
+## EKS Add-ons
+
+| Addon | Mục đích |
+|-------|----------|
+| `vpc-cni` | Assign VPC IP cho mỗi pod |
+| `kube-proxy` | Service routing |
+| `coredns` | DNS resolution (service discovery) |
+| `aws-ebs-csi-driver` | Provisioning EBS volumes cho PVC |
+
+## Helm Releases
+
+| Release | Namespace | Chart | Mục đích |
+|---------|-----------|-------|----------|
+| `aws-load-balancer-controller` | kube-system | eks/aws-load-balancer-controller | Tạo ALB từ Ingress |
+| `external-secrets` | kube-system | external-secrets/external-secrets | Sync secrets từ AWS |
+| `postgres` | toidibangiay-prod | bitnami/postgresql | In-cluster PostgreSQL |
+| `redis` | toidibangiay-prod | bitnami/redis | In-cluster Redis |
+
+## IAM Roles (IRSA)
+
+| Role | Service Account | Policy |
+|------|----------------|--------|
+| `AmazonEKSNodeRole` | EC2 nodes | EKS Worker + ECR ReadOnly + CNI |
+| `AmazonEKSLoadBalancerControllerRole` | aws-load-balancer-controller | ALB/NLB management |
+| `AmazonEKS_EBS_CSI_DriverRole` | ebs-csi-controller-sa | Tạo/xóa EBS volumes |
+
+## GitHub Secrets (Environment: AWS)
+
+| Secret | Mục đích |
+|--------|----------|
+| `AWS_ACCESS_KEY_ID` | IAM credentials |
+| `AWS_SECRET_ACCESS_KEY` | IAM credentials |
+| `AWS_ACCOUNT_ID` | `061083040425` |
+| `GITOPS_TOKEN` | GitHub PAT (repo scope) để push gitops repo |
+
+---
+
+## Lệnh Vận Hành
+
+```bash
+# Kết nối cluster
+aws eks update-kubeconfig --name toidibangiay --region us-east-2
+
+# Kiểm tra
+kubectl get nodes
+kubectl get pods -n toidibangiay-prod
+kubectl get pods -n argocd
+
+# Logs
+kubectl logs -n toidibangiay-prod deployment/gateway --tail=50
+
+# ArgoCD UI
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+# → https://localhost:8080
+
+# Force sync
+kubectl annotate application toidibangiay -n argocd \
+  argocd.argoproj.io/refresh=hard --overwrite
+
+# Kích hoạt EBS CSI với IRSA (chạy 1 lần sau khi role sẵn sàng)
+aws eks update-addon \
+  --cluster-name toidibangiay \
+  --addon-name aws-ebs-csi-driver \
+  --service-account-role-arn arn:aws:iam::061083040425:role/AmazonEKS_EBS_CSI_DriverRole \
+  --region us-east-2
+```
