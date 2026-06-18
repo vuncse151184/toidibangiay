@@ -104,4 +104,10 @@ ecomerce-architecture-plan.pptx
 skills-lock.json
 iam_policy.json
 *.claude
-k8s
+
+# ============================================================
+# GITOPS REPO (tách riêng)
+# ============================================================
+# k8s/ là checkout của repo riêng "toidibangiay-gitops".
+# Không track trong app repo — ArgoCD/Flux pull thẳng từ remote của nó.
+/k8s/
